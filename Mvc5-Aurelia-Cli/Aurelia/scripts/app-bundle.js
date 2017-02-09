@@ -75,8 +75,30 @@ define('main',["require", "exports", "./environment"], function (require, export
     exports.configure = configure;
 });
 
-define('quotes-app',["require", "exports", "bootstrap"], function (require, exports) {
+define('quotes-app',["require", "exports", "aurelia-auth", "bootstrap"], function (require, exports, aurelia_auth_1) {
     "use strict";
+    var QuotesApp = (function () {
+        function QuotesApp() {
+        }
+        QuotesApp.prototype.configureRouter = function (config, router) {
+            config.title = 'Random Quotes App';
+            config.addPipelineStep('authorize', aurelia_auth_1.AuthorizeStep);
+            config.map([
+                { route: ['', 'welcome'], name: 'welcome', moduleId: './welcome', nav: true, title: 'Welcome' },
+                { route: 'random-quote', name: 'random-quote', moduleId: './random-quote', nav: true, title: 'Random Quote' },
+                { route: 'secret-quote', name: 'secret-quote', moduleId: './secret-quote', nav: true, title: 'Super Secret Quote', auth: true },
+                { route: 'signup', name: 'signup', moduleId: './signup', nav: false, title: 'Signup', authRoute: true },
+                { route: 'login', name: 'login', moduleId: './login', nav: false, title: 'Login', authRoute: true },
+                { route: 'logout', name: 'logout', moduleId: './logout', nav: false, title: 'Logout', authRoute: true }
+            ]);
+        };
+        ;
+        QuotesApp.prototype.activate = function () {
+            this.config.configure();
+        };
+        return QuotesApp;
+    }());
+    exports.QuotesApp = QuotesApp;
 });
 
 define('resources/index',["require", "exports"], function (require, exports) {
@@ -175,4 +197,5 @@ define('quotes-router-config',["require", "exports", "aurelia-auth"], function (
 
 define('text!app.html', ['module'], function(module) { module.exports = "<template>\n  <h1>${heading}</h1>\n\n  <form submit.trigger=\"addTodo()\">\n    <input type=\"text\" value.bind=\"todoDescription\"/>\n    <button type=\"submit\">Add Todo</button>\n  </form>\n\n  <ul>\n    <li repeat.for=\"todo of todos\">\n      <input type=\"checkbox\" checked.bind=\"todo.done\">\n      <span css=\"text-decoration: ${todo.done ? 'line-through' : 'none'}\">\n        ${todo.description}\n      </span>\n      <button click.trigger=\"removeTodo(todo)\">Remove</button>\n    </li>    \n  </ul>\n</template>\n"; });
 define('text!nav-bar.html', ['module'], function(module) { module.exports = "<template>\r\n    <ul class=\"nav navbar-nav\">\r\n        <li repeat.for=\"row of router.navigation | authFilter: isAuthenticated\" class=\"${row.isActive ? 'active' : ''}\">\r\n            <a data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1.in\" href.bind=\"row.href\">${row.title}</a>\r\n        </li>\r\n    </ul>\r\n\r\n    <ul if.bind=\"!isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n        <li><a href=\"/#/login\">Login</a></li>\r\n        <li><a href=\"/#/signup\">Signup</a></li>\r\n    </ul>\r\n\r\n    <ul if.bind=\"isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n        <li><a href=\"/#/logout\">Logout</a></li>\r\n    </ul>\r\n</template>"; });
+define('text!quotes-app.html', ['module'], function(module) { module.exports = "<template>\r\n    <require from=\"bootstrap/css/bootstrap.css\"></require>\r\n    <require from='./nav-bar'></require>\r\n\r\n    <nav-bar router.bind=\"router\"></nav-bar>\r\n\r\n    <div class=\"container\">\r\n        <router-view></router-view>\r\n    </div>\r\n</template>"; });
 //# sourceMappingURL=app-bundle.js.map
