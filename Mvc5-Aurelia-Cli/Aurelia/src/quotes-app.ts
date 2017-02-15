@@ -20,7 +20,7 @@ export class QuotesApp {
         // such as which they are accessible at, which module they use, and whether
         // they should be placed in the navigation bar
         config.map([
-            { route: ['', 'welcome'], name: 'welcome', moduleId: './welcome', nav: true, title: 'Welcome' },
+            { route: ['', 'welcome'], name: 'welcome', moduleId: 'quotes-welcome', nav: true, title: 'Welcome' },
             { route: 'random-quote', name: 'random-quote', moduleId: './random-quote', nav: true, title: 'Random Quote' },
             // The secret-quote route is the only one that the user needs to be logged in to see,  so we set auth: true
             { route: 'secret-quote', name: 'secret-quote', moduleId: './secret-quote', nav: true, title: 'Super Secret Quote', auth: true },

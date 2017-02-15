@@ -15,7 +15,7 @@ export function configure(aurelia: Aurelia) {
   aurelia.use
     .standardConfiguration()
     .feature('resources')
-    .plugin('paulvanbladel/aurelia-auth', (baseConfig) => {
+    .plugin('aurelia-auth', (baseConfig) => {
          baseConfig.configure(config);
 
   if (environment.debug) {
