@@ -17,6 +17,7 @@ export function configure(aurelia: Aurelia) {
     .feature('resources')
     .plugin('aurelia-auth', (baseConfig) => {
          baseConfig.configure(config);
+    });
 
   if (environment.debug) {
     aurelia.use.developmentLogging();
@@ -26,5 +27,5 @@ export function configure(aurelia: Aurelia) {
     aurelia.use.plugin('aurelia-testing');
   }
 
-  aurelia.start().then(() => aurelia.setRoot());
+  aurelia.start().then(() => aurelia.setRoot('quotes-app'));
 }

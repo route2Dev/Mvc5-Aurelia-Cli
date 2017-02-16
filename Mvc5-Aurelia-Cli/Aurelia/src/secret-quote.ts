@@ -3,9 +3,9 @@ import {HttpClient} from 'aurelia-fetch-client';
 
 @inject(HttpClient)
 export class RandomQuote {
-    heading = "Random Quote";
+    heading = "Super Secret Quote";
 
-    randomQuote = "";
+    secretQuote = "";
 
     constructor (private httpClient: HttpClient) {        
     }
@@ -16,9 +16,10 @@ export class RandomQuote {
             .withBaseUrl("http://localhost:3001/api/");
         });
 
-        return this.httpClient.fetch("random-quote")
+        return this.httpClient.fetch("protected/random-quote")
             .then(response => response.text())
-            .then(data => this.randomQuote = data)                           
+            .then(data => this.secretQuote = data)            
+                           
             .catch(error => {{
                 console.log("Error getting quote.");
             }});

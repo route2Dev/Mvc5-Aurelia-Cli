@@ -8,6 +8,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@types/whatwg-fetch": "0.0.33",
     "aurelia-animator-css": "^1.0.0",
     "aurelia-auth": "^3.0.5",
     "aurelia-bootstrapper": "^1.0.0",
