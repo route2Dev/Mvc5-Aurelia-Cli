@@ -11,9 +11,13 @@ export class RandomQuote {
     }
 
     activate() {
+        return this.getQuote();
+    }
+
+    getQuote() {
         this.httpClient.configure(config => {
             config.useStandardConfiguration()
-            .withBaseUrl("http://localhost:3001/api/");
+            .withBaseUrl("http://localhost:45933/api/");
         });
 
         return this.httpClient.fetch("random-quote")
@@ -21,6 +25,6 @@ export class RandomQuote {
             .then(data => this.randomQuote = data)                           
             .catch(error => {{
                 console.log("Error getting quote.");
-            }});
+        }});        
     }
 }

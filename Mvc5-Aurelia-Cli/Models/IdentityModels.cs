@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
+using Mvc5_Aurelia_Cli.Entities;
 
 namespace Mvc5_Aurelia_Cli.Models
 {
@@ -29,5 +30,7 @@ namespace Mvc5_Aurelia_Cli.Models
         {
             return new ApplicationDbContext();
         }
+
+        public DbSet<Client> Clients { get; set; }
     }
 }

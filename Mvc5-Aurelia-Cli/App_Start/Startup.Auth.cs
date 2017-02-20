@@ -6,11 +6,16 @@ using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.Google;
 using Owin;
 using Mvc5_Aurelia_Cli.Models;
+using System.Web.Http;
+using Microsoft.Owin.Security.OAuth;
+using Mvc5_Aurelia_Cli.Providers;
 
 namespace Mvc5_Aurelia_Cli
 {
     public partial class Startup
     {
+        public static OAuthBearerAuthenticationOptions OAuthBearerOptions { get; private set; }
+
         // For more information on configuring authentication, please visit http://go.microsoft.com/fwlink/?LinkId=301864
         public void ConfigureAuth(IAppBuilder app)
         {
@@ -44,6 +49,21 @@ namespace Mvc5_Aurelia_Cli
             // Once you check this option, your second step of verification during the login process will be remembered on the device where you logged in from.
             // This is similar to the RememberMe option when you log in.
             app.UseTwoFactorRememberBrowserCookie(DefaultAuthenticationTypes.TwoFactorRememberBrowserCookie);
+
+            OAuthBearerOptions = new OAuthBearerAuthenticationOptions();
+
+            OAuthAuthorizationServerOptions OAuthServerOptions = new OAuthAuthorizationServerOptions()
+            {
+
+                AllowInsecureHttp = true,
+                TokenEndpointPath = new PathString("/token"),
+                AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(30),
+                Provider = new SimpleAuthorizationServerProvider()
+            };
+
+            // Token Generation
+            app.UseOAuthAuthorizationServer(OAuthServerOptions);
+            app.UseOAuthBearerAuthentication(OAuthBearerOptions);
 
             // Uncomment the following lines to enable logging in with third party login providers
             //app.UseMicrosoftAccountAuthentication(
