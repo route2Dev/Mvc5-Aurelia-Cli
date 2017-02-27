@@ -20,9 +20,9 @@ export class Signup {
 
     signup() {
 
-        var userInfo = { email: this.email, password: this.password };
+        var userInfo = { userName: this.email, password: this.password, confirmPassword: this.password };
 
-        return this.auth.signup("", this.email, this.password)
+        return this.auth.signup(userInfo, "", "")
             .then((response) => {
                 console.log("Signed Up!");
             })

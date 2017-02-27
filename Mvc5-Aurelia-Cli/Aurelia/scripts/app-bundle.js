@@ -1,48 +1,51 @@
-define('todo',["require", "exports"], function (require, exports) {
-    "use strict";
-    var Todo = (function () {
-        function Todo(description) {
-            this.description = description;
-            this.done = false;
-        }
-        return Todo;
-    }());
-    exports.Todo = Todo;
-});
-
-define('app',["require", "exports", "./todo"], function (require, exports, todo_1) {
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+define('app',["require", "exports", "aurelia-framework", "aurelia-auth", "aurelia-auth", "bootstrap"], function (require, exports, aurelia_framework_1, aurelia_auth_1, aurelia_auth_2) {
     "use strict";
     var App = (function () {
-        function App() {
-            this.heading = "Todos";
-            this.todos = [];
-            this.todoDescription = '';
+        function App(fetchConfig) {
+            this.fetchConfig = fetchConfig;
         }
-        App.prototype.addTodo = function () {
-            if (this.todoDescription) {
-                this.todos.push(new todo_1.Todo(this.todoDescription));
-                this.todoDescription = '';
-            }
+        App.prototype.configureRouter = function (config, router) {
+            this.router = router;
+            config.title = 'Random Quotes App';
+            config.addPipelineStep('authorize', aurelia_auth_1.AuthorizeStep);
+            config.map([
+                { route: ['', 'Home'], name: 'Home', moduleId: 'home', nav: true, title: 'Home', settings: { class: 'navbar-brand' } },
+                { route: 'random-quote', name: 'random-quote', moduleId: 'random-quote', nav: true, title: 'Random Quote' },
+                { route: 'secret-quote', name: 'secret-quote', moduleId: 'secret-quote', nav: true, title: 'Super Secret Quote', auth: true },
+                { route: 'signup', name: 'signup', moduleId: 'signup', nav: false, title: 'Sign up', authRoute: true },
+                { route: 'login', name: 'login', moduleId: 'login', nav: false, title: 'Login', authRoute: true },
+                { route: 'logout', name: 'logout', moduleId: 'logout', nav: false, title: 'Logout', authRoute: true }
+            ]);
         };
-        App.prototype.removeTodo = function (todo) {
-            var index = this.todos.indexOf(todo);
-            if (index !== -1) {
-                this.todos.splice(index, 1);
-            }
+        App.prototype.activate = function () {
+            this.fetchConfig.configure();
         };
         return App;
     }());
+    App = __decorate([
+        aurelia_framework_1.inject(aurelia_auth_2.FetchConfig),
+        __metadata("design:paramtypes", [aurelia_auth_2.FetchConfig])
+    ], App);
     exports.App = App;
 });
 
 define('auth-config',["require", "exports"], function (require, exports) {
     "use strict";
     var config = {
-        baseUrl: 'http://localhost:3001',
-        signupUrl: 'users',
-        loginUrl: 'sessions/create',
-        tokenName: 'id_token',
-        loginRedirect: '#/welcome'
+        baseUrl: 'http://localhost:45933',
+        signupUrl: 'api/account/register',
+        loginUrl: 'token',
+        tokenName: 'access_token',
+        loginRedirect: "#/secret-quote"
     };
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = config;
@@ -55,6 +58,18 @@ define('environment',["require", "exports"], function (require, exports) {
         debug: true,
         testing: true
     };
+});
+
+define('home',["require", "exports"], function (require, exports) {
+    "use strict";
+    var Home = (function () {
+        function Home() {
+            this.heading = "Aurelia Authentication";
+            this.info = "Aurelia Quotes Application which uses OAuth Bearer Token for authentication and implements Refresh Tokens. The backend API is built using ASP.NET Web API 2, OWIN middleware, and ASP.NET Identity.";
+        }
+        return Home;
+    }());
+    exports.Home = Home;
 });
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
@@ -76,9 +91,10 @@ define('login',["require", "exports", "aurelia-framework", "aurelia-auth"], func
             this.password = "";
             this.loginError = "";
         }
-        Login.prototype.signup = function () {
+        Login.prototype.login = function () {
             var _this = this;
-            return this.auth.login(this.email, this.password)
+            var creds = "grant_type=password&username=" + this.email + "&password=" + this.password;
+            return this.auth.login(creds, null)
                 .then(function (response) {
                 console.log("Login response: " + response);
             })
@@ -128,7 +144,7 @@ define('logout',["require", "exports", "aurelia-auth", "aurelia-framework"], fun
     exports.Logout = Logout;
 });
 
-define('main',["require", "exports", "./environment"], function (require, exports, environment_1) {
+define('main',["require", "exports", "./auth-config", "./environment"], function (require, exports, auth_config_1, environment_1) {
     "use strict";
     Promise.config({
         warnings: {
@@ -138,7 +154,10 @@ define('main',["require", "exports", "./environment"], function (require, export
     function configure(aurelia) {
         aurelia.use
             .standardConfiguration()
-            .feature('resources');
+            .feature('resources')
+            .plugin('aurelia-auth', function (baseConfig) {
+            baseConfig.configure(auth_config_1.default);
+        });
         if (environment_1.default.debug) {
             aurelia.use.developmentLogging();
         }
@@ -185,83 +204,6 @@ define('nav-bar',["require", "exports", "aurelia-framework", "aurelia-framework"
         __metadata("design:paramtypes", [aurelia_auth_1.AuthService])
     ], NavBar);
     exports.NavBar = NavBar;
-});
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-define('quotes-app',["require", "exports", "aurelia-framework", "aurelia-auth", "aurelia-auth", "bootstrap"], function (require, exports, aurelia_framework_1, aurelia_auth_1, aurelia_auth_2) {
-    "use strict";
-    var QuotesApp = (function () {
-        function QuotesApp(fetchConfig) {
-            this.fetchConfig = fetchConfig;
-        }
-        QuotesApp.prototype.configureRouter = function (config, router) {
-            this.router = router;
-            config.title = 'Random Quotes App';
-            config.addPipelineStep('authorize', aurelia_auth_1.AuthorizeStep);
-            config.map([
-                { route: ['', 'welcome'], name: 'welcome', moduleId: 'quotes-welcome', nav: true, title: 'Welcome' },
-                { route: 'random-quote', name: 'random-quote', moduleId: 'random-quote', nav: true, title: 'Random Quote' },
-                { route: 'secret-quote', name: 'secret-quote', moduleId: 'secret-quote', nav: true, title: 'Super Secret Quote', auth: true },
-                { route: 'signup', name: 'signup', moduleId: 'signup', nav: false, title: 'Signup', authRoute: true },
-                { route: 'login', name: 'login', moduleId: 'login', nav: false, title: 'Login', authRoute: true },
-                { route: 'logout', name: 'logout', moduleId: 'logout', nav: false, title: 'Logout', authRoute: true }
-            ]);
-        };
-        QuotesApp.prototype.activate = function () {
-            this.fetchConfig.configure();
-        };
-        return QuotesApp;
-    }());
-    QuotesApp = __decorate([
-        aurelia_framework_1.inject(aurelia_auth_2.FetchConfig),
-        __metadata("design:paramtypes", [aurelia_auth_2.FetchConfig])
-    ], QuotesApp);
-    exports.QuotesApp = QuotesApp;
-});
-
-define('quotes-main',["require", "exports", "./auth-config", "./environment"], function (require, exports, auth_config_1, environment_1) {
-    "use strict";
-    Promise.config({
-        warnings: {
-            wForgottenReturn: false
-        }
-    });
-    function configure(aurelia) {
-        aurelia.use
-            .standardConfiguration()
-            .feature('resources')
-            .plugin('aurelia-auth', function (baseConfig) {
-            baseConfig.configure(auth_config_1.default);
-        });
-        if (environment_1.default.debug) {
-            aurelia.use.developmentLogging();
-        }
-        if (environment_1.default.testing) {
-            aurelia.use.plugin('aurelia-testing');
-        }
-        aurelia.start().then(function () { return aurelia.setRoot('quotes-app'); });
-    }
-    exports.configure = configure;
-});
-
-define('quotes-welcome',["require", "exports"], function (require, exports) {
-    "use strict";
-    var QuotesWelcome = (function () {
-        function QuotesWelcome() {
-            this.heading = "Welcome to the Random Quotes App!";
-            this.info = "You can get a random quote without logging in, but if you can get a super secret quote!";
-        }
-        return QuotesWelcome;
-    }());
-    exports.QuotesWelcome = QuotesWelcome;
 });
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
@@ -329,7 +271,7 @@ define('secret-quote',["require", "exports", "aurelia-framework", "aurelia-fetch
             var _this = this;
             this.httpClient.configure(function (config) {
                 config.useStandardConfiguration()
-                    .withBaseUrl("http://localhost:3001/api/");
+                    .withBaseUrl("http://localhost:45933/api/");
             });
             return this.httpClient.fetch("protected/random-quote")
                 .then(function (response) { return response.text(); })
@@ -370,8 +312,8 @@ define('signup',["require", "exports", "aurelia-framework", "aurelia-auth"], fun
         }
         Signup.prototype.signup = function () {
             var _this = this;
-            var userInfo = { email: this.email, password: this.password };
-            return this.auth.signup("", this.email, this.password)
+            var userInfo = { userName: this.email, password: this.password, confirmPassword: this.password };
+            return this.auth.signup(userInfo, "", "")
                 .then(function (response) {
                 console.log("Signed Up!");
             })
@@ -387,6 +329,18 @@ define('signup',["require", "exports", "aurelia-framework", "aurelia-auth"], fun
         __metadata("design:paramtypes", [aurelia_auth_1.AuthService])
     ], Signup);
     exports.Signup = Signup;
+});
+
+define('todo',["require", "exports"], function (require, exports) {
+    "use strict";
+    var Todo = (function () {
+        function Todo(description) {
+            this.description = description;
+            this.done = false;
+        }
+        return Todo;
+    }());
+    exports.Todo = Todo;
 });
 
 define('resources/index',["require", "exports"], function (require, exports) {
@@ -1722,14 +1676,13 @@ define('aurelia-auth/auth-filter',["exports"], function (exports) {
     return AuthFilterValueConverter;
   }();
 });
-define('text!app.html', ['module'], function(module) { module.exports = "<template>\n  <h1>${heading}</h1>\n\n  <form submit.trigger=\"addTodo()\">\n    <input type=\"text\" value.bind=\"todoDescription\"/>\n    <button type=\"submit\">Add Todo</button>\n  </form>\n\n  <ul>\n    <li repeat.for=\"todo of todos\">\n      <input type=\"checkbox\" checked.bind=\"todo.done\">\n      <span css=\"text-decoration: ${todo.done ? 'line-through' : 'none'}\">\n        ${todo.description}\n      </span>\n      <button click.trigger=\"removeTodo(todo)\">Remove</button>\n    </li>    \n  </ul>\n</template>\n"; });
-define('text!styles/main.css', ['module'], function(module) { module.exports = "body {\r\n    padding-top: 70px;\r\n  }"; });
-define('text!login.html', ['module'], function(module) { module.exports = "<template>\r\n  <section>\r\n    <h2>${heading}</h2>\r\n\r\n    <form role=\"form\" submit.delegate=\"login()\">\r\n      <div class=\"form-group\">\r\n        <label for=\"email\">Email</label>\r\n        <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n      </div>\r\n      <div class=\"form-group\">\r\n        <label for=\"password\">Password</label>\r\n        <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n      </div>\r\n      <button type=\"submit\" class=\"btn btn-default\">Login</button>\r\n    </form>\r\n    \r\n    <hr>\r\n    <div class=\"alert alert-danger\" if.bind=\"loginError\">${loginError}</div>\r\n  </section>\r\n</template>"; });
+define('text!app.html', ['module'], function(module) { module.exports = "<template>\r\n    <require from=\"bootstrap/css/bootstrap.css\"></require>\r\n    <require from=\"./styles/main.css\"></require>\r\n    <require from='./nav-bar'></require>\r\n                \r\n    <nav-bar router.bind=\"router\"></nav-bar>\r\n\r\n    <!--<div class=\"container\">-->\r\n        <router-view></router-view>\r\n    <!--</div>-->\r\n</template>"; });
+define('text!styles/main.css', ['module'], function(module) { module.exports = "body {\r\n    padding-top: 70px;\r\n  }\r\n\r\n.page-header {\r\n  border-bottom: rgb(221, 221, 221) solid 1px;\r\n}"; });
+define('text!home.html', ['module'], function(module) { module.exports = "<template>\r\n    <section>\r\n        <div class=\"jumbotron\">\r\n            <div class=\"container\">\r\n                 <div class=\"page-header text-center\">\r\n                    <h1>${heading}</h1>\r\n                 </div>\r\n                <p>${info}</p>\r\n            </div>\r\n        </div>\r\n    <div class=\"row\">\r\n        <div class=\"col-md-2\">\r\n            &nbsp;\r\n        </div>\r\n        <div class=\"col-md-4\">\r\n            <h2>Login</h2>\r\n            <p class=\"text-primary\">If you have Username and Password, you can use the button below to access the secured content using a token.</p>\r\n            <p><a class=\"btn btn-info\" href=\"#/login\" role=\"button\">Login &raquo;</a></p>\r\n        </div>\r\n        <div class=\"col-md-4\">\r\n            <h2>Sign Up</h2>\r\n            <p class=\"text-primary\">Use the button below to create Username and Password to access the secured content using a token.</p>\r\n            <p><a class=\"btn btn-info\" href=\"#/signup\" role=\"button\">Sign Up &raquo;</a></p>\r\n        </div>\r\n        <div class=\"col-md-2\">\r\n            &nbsp;\r\n        </div>\r\n    </div>             \r\n    </section>\r\n</template>"; });
+define('text!login.html', ['module'], function(module) { module.exports = "<template>\r\n  <section>\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n\r\n      <form role=\"form\" submit.delegate=\"login()\">\r\n        <div class=\"form-group\">\r\n          <label for=\"email\">Email</label>\r\n          <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n        </div>\r\n        <div class=\"form-group\">\r\n          <label for=\"password\">Password</label>\r\n          <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n        </div>\r\n        <button type=\"submit\" class=\"btn btn-primary\">Login</button>\r\n      </form>\r\n\r\n      <hr>\r\n      <div class=\"alert alert-danger\" if.bind=\"loginError\">${loginError}</div>\r\n    </div>\r\n  </section>\r\n</template>"; });
 define('text!logout.html', ['module'], function(module) { module.exports = "<template></template>"; });
-define('text!nav-bar.html', ['module'], function(module) { module.exports = "<template>\r\n  <nav class=\"navbar navbar-default navbar-fixed-top\" role=\"navigation\">\r\n    <div class=\"navbar-header\">\r\n      <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1\">\r\n        <span class=\"sr-only\">Toggle Navigation</span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n      </button>\r\n      <a class=\"navbar-brand\" href=\"#\">\r\n        <i class=\"fa fa-quote-left\"></i>\r\n        <i class=\"fa fa-quote-right\"></i>\r\n        <span>${router.title}</span>\r\n      </a>\r\n    </div>\r\n\r\n    <div class=\"collapse navbar-collapse\" id=\"bs-example-navbar-collapse-1\">\r\n      <ul class=\"nav navbar-nav\">\r\n        <li repeat.for=\"row of router.navigation | authFilter: isAuthenticated\" class=\"${row.isActive ? 'active' : ''}\">\r\n          <a data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1.in\" href.bind=\"row.href\">${row.title}</a>\r\n        </li>\r\n      </ul>\r\n\r\n      <ul if.bind=\"!isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n        <li><a href=\"/#/login\">Login</a></li>\r\n        <li><a href=\"/#/signup\">Signup</a></li>\r\n      </ul>\r\n\r\n      <ul if.bind=\"isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n        <li><a href=\"/#/logout\">Logout</a></li>\r\n      </ul>\r\n\r\n      <ul class=\"nav navbar-nav navbar-right\">\r\n        <li class=\"loader\" if.bind=\"router.isNavigating\">\r\n          <i class=\"fa fa-spinner fa-spin fa-2x\"></i>\r\n        </li>\r\n      </ul>\r\n    </div>\r\n  </nav>\r\n</template>"; });
-define('text!quotes-app.html', ['module'], function(module) { module.exports = "<template>\r\n    <require from=\"bootstrap/css/bootstrap.css\"></require>\r\n    <require from=\"./styles/main.css\"></require>\r\n    <require from='./nav-bar'></require>\r\n                \r\n    <nav-bar router.bind=\"router\"></nav-bar>\r\n\r\n    <div class=\"container\">\r\n        <router-view></router-view>\r\n    </div>\r\n</template>"; });
-define('text!quotes-welcome.html', ['module'], function(module) { module.exports = "<template>\r\n    <section>\r\n        <h2>${heading}</h2>\r\n\r\n        <div class=\"well\">\r\n            <h4>${info}</h4>\r\n        </div>\r\n    </section>\r\n</template>"; });
-define('text!random-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"col-sm-12\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${randomQuote}</h4>\r\n        </div>\r\n        <div>\r\n          <button click.delegate=\"getQuote()\">Refresh</button>\r\n        </div>\r\n      </div>\r\n  </section>\r\n</template>"; });
-define('text!secret-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${secretQuote}</h4>\r\n        </div>\r\n      </div>\r\n  </section>\r\n</template>"; });
-define('text!signup.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <h2>${heading}</h2>\r\n\r\n    <form role=\"form\" submit.delegate=\"signup()\">\r\n      <div class=\"form-group\">\r\n        <label for=\"email\">Email</label>\r\n        <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n      </div>\r\n      <div class=\"form-group\">\r\n        <label for=\"password\">Password</label>\r\n        <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n      </div>\r\n      <button type=\"submit\" class=\"btn btn-default\">Signup</button>\r\n    </form>\r\n    <hr>\r\n    <div class=\"alert alert-danger\" if.bind=\"signupError\">${signupError}</div>\r\n  </section>\r\n</template>"; });
+define('text!nav-bar.html', ['module'], function(module) { module.exports = "<template>\r\n  <nav class=\"navbar navbar-inverse navbar-fixed-top\" role=\"navigation\">\r\n    <div class=\"container\">\r\n      <div class=\"navbar-header\">\r\n        <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1\">\r\n        <span class=\"sr-only\">Toggle Navigation</span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n      </button>\r\n      </div>\r\n      <div class=\"collapse navbar-collapse\" id=\"bs-example-navbar-collapse-1\">\r\n        <ul class=\"nav navbar-nav\">\r\n          <li repeat.for=\"row of router.navigation | authFilter: isAuthenticated\" class=\"${row.isActive ? 'active' : ''}\">\r\n            <a class=\"${row.settings.class}\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1.in\" href.bind=\"row.href\">${row.title}</a>\r\n          </li>\r\n        </ul>\r\n\r\n        <ul if.bind=\"!isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n          <li><a href=\"/#/login\">Login</a></li>\r\n          <li><a href=\"/#/signup\">Signup</a></li>\r\n        </ul>\r\n\r\n        <ul if.bind=\"isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n          <li><a href=\"/#/logout\">Logout</a></li>\r\n        </ul>\r\n\r\n        <ul class=\"nav navbar-nav navbar-right\">\r\n          <li class=\"loader\" if.bind=\"router.isNavigating\">\r\n            <i class=\"fa fa-spinner fa-spin fa-2x\"></i>\r\n          </li>\r\n        </ul>\r\n      </div>\r\n    </div>\r\n  </nav>\r\n</template>"; });
+define('text!random-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"col-sm-12\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${randomQuote}</h4>\r\n        </div>\r\n        <div>\r\n          <button class=\"btn btn-primary\" click.delegate=\"getQuote()\">Refresh</button>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
+define('text!secret-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${secretQuote}</h4>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
+define('text!signup.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n\r\n      <form role=\"form\" submit.delegate=\"signup()\">\r\n        <div class=\"form-group\">\r\n          <label for=\"email\">Email</label>\r\n          <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n        </div>\r\n        <div class=\"form-group\">\r\n          <label for=\"password\">Password</label>\r\n          <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n        </div>\r\n        <button type=\"submit\" class=\"btn btn-primary\">Signup</button>\r\n      </form>\r\n      <hr>\r\n      <div class=\"alert alert-danger\" if.bind=\"signupError\">${signupError}</div>\r\n    </div>\r\n  </section>\r\n</template>"; });
 //# sourceMappingURL=app-bundle.js.map

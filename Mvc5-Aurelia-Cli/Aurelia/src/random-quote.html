@@ -1,13 +1,15 @@
 <template>
   <section class="col-sm-12">
+    <div class="container">
       <h2>${heading}</h2>
       <div class="row au-stagger">
         <div class="well">
           <h4>${randomQuote}</h4>
         </div>
         <div>
-          <button click.delegate="getQuote()">Refresh</button>
+          <button class="btn btn-primary" click.delegate="getQuote()">Refresh</button>
         </div>
       </div>
+    </div>
   </section>
 </template>

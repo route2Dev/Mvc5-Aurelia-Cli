@@ -13,7 +13,7 @@ export class RandomQuote {
     activate() {
         this.httpClient.configure(config => {
             config.useStandardConfiguration()
-            .withBaseUrl("http://localhost:3001/api/");
+            .withBaseUrl("http://localhost:45933/api/");
         });
 
         return this.httpClient.fetch("protected/random-quote")

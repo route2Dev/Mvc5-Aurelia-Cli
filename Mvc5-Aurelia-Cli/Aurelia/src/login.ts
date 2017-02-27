@@ -18,8 +18,10 @@ export class Login {
     constructor(private auth: AuthService) {
     }
 
-    signup() {      
-        return this.auth.login(this.email, this.password)
+    login() {             
+         var creds = "grant_type=password&username=" + this.email + "&password=" + this.password;
+
+        return this.auth.login(creds, null)
             .then((response) => {
                 console.log("Login response: " + response);
             })

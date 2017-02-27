@@ -1,18 +1,11 @@
 <template>
-  <h1>${heading}</h1>
+    <require from="bootstrap/css/bootstrap.css"></require>
+    <require from="./styles/main.css"></require>
+    <require from='./nav-bar'></require>
+                
+    <nav-bar router.bind="router"></nav-bar>
 
-  <form submit.trigger="addTodo()">
-    <input type="text" value.bind="todoDescription"/>
-    <button type="submit">Add Todo</button>
-  </form>
-
-  <ul>
-    <li repeat.for="todo of todos">
-      <input type="checkbox" checked.bind="todo.done">
-      <span css="text-decoration: ${todo.done ? 'line-through' : 'none'}">
-        ${todo.description}
-      </span>
-      <button click.trigger="removeTodo(todo)">Remove</button>
-    </li>    
-  </ul>
+    <!--<div class="container">-->
+        <router-view></router-view>
+    <!--</div>-->
 </template>

@@ -1,9 +1,9 @@
 var config = {
-    baseUrl: 'http://localhost:3001',
-    signupUrl: 'users',
-    loginUrl: 'sessions/create',
-    tokenName: 'id_token',
-    loginRedirect: '#/welcome'
+    baseUrl: 'http://localhost:45933',
+    signupUrl: 'api/account/register',
+    loginUrl: 'token',
+    tokenName: 'access_token',
+    loginRedirect: "#/secret-quote"    
 }
 
 export default config;

@@ -1,3 +1,7 @@
 body {
     padding-top: 70px;
   }
+
+.page-header {
+  border-bottom: rgb(221, 221, 221) solid 1px;
+}
