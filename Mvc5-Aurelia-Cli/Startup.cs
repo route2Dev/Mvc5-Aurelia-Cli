@@ -9,16 +9,14 @@ namespace Mvc5_Aurelia_Cli
     {
         public void Configuration(IAppBuilder app)
         {
-            app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);
-
             ConfigureAuth(app);
 
             HttpConfiguration config = new HttpConfiguration();          
 
             WebApiConfig.Register(config);
 
+            app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);
             app.UseWebApi(config);
-
         }
     }
 }

@@ -23,8 +23,8 @@ export class RandomQuote {
         return this.httpClient.fetch("random-quote")
             .then(response => response.text())
             .then(data => this.randomQuote = data)                           
-            .catch(error => {{
+            .catch(error => {
                 console.log("Error getting quote.");
-        }});        
+        });        
     }
 }

@@ -32,5 +32,6 @@ namespace Mvc5_Aurelia_Cli.Models
         }
 
         public DbSet<Client> Clients { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
     }
 }

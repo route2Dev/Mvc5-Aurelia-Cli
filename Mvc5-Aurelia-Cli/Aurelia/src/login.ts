@@ -12,6 +12,7 @@ export class Login {
 
     email = "";
     password = "";
+    useRefreshTokens = false;
 
     loginError = "";
 
@@ -20,6 +21,10 @@ export class Login {
 
     login() {             
          var creds = "grant_type=password&username=" + this.email + "&password=" + this.password;
+
+         if(this.useRefreshTokens) {
+             creds = creds + "&client_id=" + "auAuthApp";
+         }         
 
         return this.auth.login(creds, null)
             .then((response) => {

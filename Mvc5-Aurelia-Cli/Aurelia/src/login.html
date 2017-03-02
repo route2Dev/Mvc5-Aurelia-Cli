@@ -1,22 +1,27 @@
 <template>
   <section>
     <div class="container">
-      <h2>${heading}</h2>
-
-      <form role="form" submit.delegate="login()">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="text" value.bind="email" class="form-control" id="email" placeholder="Email">
-        </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" value.bind="password" class="form-control" id="password" placeholder="Password">
-        </div>
-        <button type="submit" class="btn btn-primary">Login</button>
-      </form>
-
-      <hr>
-      <div class="alert alert-danger" if.bind="loginError">${loginError}</div>
+      <div class="col-sm-6 col-md-4 col-md-offset-4">
+        <h2>${heading}</h2>    
+          <form role="form" submit.delegate="login()">
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="text" value.bind="email" class="form-control" id="email" placeholder="Email">
+            </div>
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input type="password" value.bind="password" class="form-control" id="password" placeholder="Password">
+            </div>
+            <div class="checkbox">
+              <label>
+                <input type="checkbox" checked.bind="useRefreshTokens"> <strong>Use Refresh Tokens</strong>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+          </form>        
+        <hr>
+        <div class="alert alert-danger" if.bind="loginError">${loginError}</div>
+      </div>
     </div>
   </section>
 </template>

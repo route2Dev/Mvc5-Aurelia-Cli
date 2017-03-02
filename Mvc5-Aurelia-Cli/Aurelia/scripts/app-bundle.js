@@ -89,11 +89,15 @@ define('login',["require", "exports", "aurelia-framework", "aurelia-auth"], func
             this.heading = "Login";
             this.email = "";
             this.password = "";
+            this.useRefreshTokens = false;
             this.loginError = "";
         }
         Login.prototype.login = function () {
             var _this = this;
             var creds = "grant_type=password&username=" + this.email + "&password=" + this.password;
+            if (this.useRefreshTokens) {
+                creds = creds + "&client_id=" + "auAuthApp";
+            }
             return this.auth.login(creds, null)
                 .then(function (response) {
                 console.log("Login response: " + response);
@@ -236,9 +240,7 @@ define('random-quote',["require", "exports", "aurelia-framework", "aurelia-fetch
                 .then(function (response) { return response.text(); })
                 .then(function (data) { return _this.randomQuote = data; })
                 .catch(function (error) {
-                {
-                    console.log("Error getting quote.");
-                }
+                console.log("Error getting quote.");
             });
         };
         return RandomQuote;
@@ -277,9 +279,7 @@ define('secret-quote',["require", "exports", "aurelia-framework", "aurelia-fetch
                 .then(function (response) { return response.text(); })
                 .then(function (data) { return _this.secretQuote = data; })
                 .catch(function (error) {
-                {
-                    console.log("Error getting quote.");
-                }
+                console.log("Error getting quote.");
             });
         };
         return RandomQuote;
@@ -348,6 +348,139 @@ define('resources/index',["require", "exports"], function (require, exports) {
     function configure(config) {
     }
     exports.configure = configure;
+});
+
+define('services/localStorageService',["require", "exports"], function (require, exports) {
+    "use strict";
+    var LocalStorageService = (function () {
+        function LocalStorageService() {
+        }
+        LocalStorageService.prototype.set = function (key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        };
+        LocalStorageService.prototype.get = function (key) {
+            return localStorage.getItem(key);
+        };
+        LocalStorageService.prototype.remove = function (key) {
+            localStorage.removeItem(key);
+        };
+        return LocalStorageService;
+    }());
+    exports.LocalStorageService = LocalStorageService;
+});
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+define('services/authService',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "./localStorageService"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, localStorageService_1) {
+    "use strict";
+    var AuthService = (function () {
+        function AuthService(http, storage) {
+            this.http = http;
+            this.storage = storage;
+            this.baseUrl = "http://localhost:45933/";
+            this.authentication = {
+                isAuth: false,
+                userName: "",
+                useRefreshTokens: false
+            };
+            this.externalAuthData = {
+                provider: "",
+                userName: "",
+                externalAccessToken: ""
+            };
+            this.http.configure(function (config) {
+                config
+                    .withBaseUrl('http://localhost:45933/');
+            });
+        }
+        AuthService.prototype.status = function (response) {
+            if (response.status >= 200 && response.status < 400) {
+                return response.json().catch(function (error) { return null; });
+            }
+            throw response;
+        };
+        AuthService.prototype.logout = function () {
+            this.storage.remove('authorizationData');
+        };
+        AuthService.prototype.signUp = function (registration) {
+            this.logout();
+            return this.http.fetch('api/account/register', {
+                method: 'post',
+                body: aurelia_fetch_client_1.json(registration)
+            })
+                .then(this.status)
+                .then(function (response) {
+                return response;
+            });
+        };
+        AuthService.prototype.login = function (loginData) {
+            var _this = this;
+            var content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
+            return this.http.fetch('token', {
+                method: 'post',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: content
+            })
+                .then(this.status)
+                .then(function (response) {
+                var authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
+                _this.storage.set('authorizationData', authorizationData);
+                _this.authentication.isAuth = true;
+                _this.authentication.userName = loginData.userName;
+                return response;
+            })
+                .catch(function (error) {
+                _this.logout();
+                console.log("Error logging in.");
+            });
+        };
+        return AuthService;
+    }());
+    AuthService = __decorate([
+        aurelia_framework_1.inject(aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService),
+        __metadata("design:paramtypes", [aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService])
+    ], AuthService);
+    exports.AuthService = AuthService;
+});
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+define('services/auth-interceptor-service',["require", "exports", "aurelia-framework", "./localStorageService"], function (require, exports, aurelia_framework_1, localStorageService_1) {
+    "use strict";
+    var AuthInterceptorService = (function () {
+        function AuthInterceptorService(aurelia, storage) {
+            this.aurelia = aurelia;
+            this.storage = storage;
+        }
+        AuthInterceptorService.prototype.request = function (request) {
+            var data = this.storage.get('authorizationData');
+            if (data) {
+                var authData = JSON.parse(data);
+                request.headers.append('Authorization', authData.accessToken);
+            }
+            return request;
+        };
+        return AuthInterceptorService;
+    }());
+    AuthInterceptorService = __decorate([
+        aurelia_framework_1.inject(aurelia_framework_1.Aurelia, localStorageService_1.LocalStorageService),
+        __metadata("design:paramtypes", [aurelia_framework_1.Aurelia, localStorageService_1.LocalStorageService])
+    ], AuthInterceptorService);
+    exports.AuthInterceptorService = AuthInterceptorService;
 });
 
 define('aurelia-auth/auth-service',['exports', 'aurelia-dependency-injection', 'aurelia-fetch-client', 'aurelia-event-aggregator', './authentication', './base-config', './oAuth1', './oAuth2', './auth-utilities'], function (exports, _aureliaDependencyInjection, _aureliaFetchClient, _aureliaEventAggregator, _authentication, _baseConfig, _oAuth, _oAuth2, _authUtilities) {
@@ -1678,11 +1811,11 @@ define('aurelia-auth/auth-filter',["exports"], function (exports) {
 });
 define('text!app.html', ['module'], function(module) { module.exports = "<template>\r\n    <require from=\"bootstrap/css/bootstrap.css\"></require>\r\n    <require from=\"./styles/main.css\"></require>\r\n    <require from='./nav-bar'></require>\r\n                \r\n    <nav-bar router.bind=\"router\"></nav-bar>\r\n\r\n    <!--<div class=\"container\">-->\r\n        <router-view></router-view>\r\n    <!--</div>-->\r\n</template>"; });
 define('text!styles/main.css', ['module'], function(module) { module.exports = "body {\r\n    padding-top: 70px;\r\n  }\r\n\r\n.page-header {\r\n  border-bottom: rgb(221, 221, 221) solid 1px;\r\n}"; });
-define('text!home.html', ['module'], function(module) { module.exports = "<template>\r\n    <section>\r\n        <div class=\"jumbotron\">\r\n            <div class=\"container\">\r\n                 <div class=\"page-header text-center\">\r\n                    <h1>${heading}</h1>\r\n                 </div>\r\n                <p>${info}</p>\r\n            </div>\r\n        </div>\r\n    <div class=\"row\">\r\n        <div class=\"col-md-2\">\r\n            &nbsp;\r\n        </div>\r\n        <div class=\"col-md-4\">\r\n            <h2>Login</h2>\r\n            <p class=\"text-primary\">If you have Username and Password, you can use the button below to access the secured content using a token.</p>\r\n            <p><a class=\"btn btn-info\" href=\"#/login\" role=\"button\">Login &raquo;</a></p>\r\n        </div>\r\n        <div class=\"col-md-4\">\r\n            <h2>Sign Up</h2>\r\n            <p class=\"text-primary\">Use the button below to create Username and Password to access the secured content using a token.</p>\r\n            <p><a class=\"btn btn-info\" href=\"#/signup\" role=\"button\">Sign Up &raquo;</a></p>\r\n        </div>\r\n        <div class=\"col-md-2\">\r\n            &nbsp;\r\n        </div>\r\n    </div>             \r\n    </section>\r\n</template>"; });
-define('text!login.html', ['module'], function(module) { module.exports = "<template>\r\n  <section>\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n\r\n      <form role=\"form\" submit.delegate=\"login()\">\r\n        <div class=\"form-group\">\r\n          <label for=\"email\">Email</label>\r\n          <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n        </div>\r\n        <div class=\"form-group\">\r\n          <label for=\"password\">Password</label>\r\n          <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n        </div>\r\n        <button type=\"submit\" class=\"btn btn-primary\">Login</button>\r\n      </form>\r\n\r\n      <hr>\r\n      <div class=\"alert alert-danger\" if.bind=\"loginError\">${loginError}</div>\r\n    </div>\r\n  </section>\r\n</template>"; });
+define('text!home.html', ['module'], function(module) { module.exports = "<template>\r\n    <section>\r\n        <div class=\"jumbotron\">\r\n            <div class=\"container\">\r\n            \r\n                <div class=\"page-header text-center\">\r\n                    <h1>${heading}</h1>\r\n                    </div>\r\n                <p>${info}</p>\r\n            </div>\r\n        </div>\r\n        <div class=\"container\">\r\n            <div class=\"row\">\r\n                <div class=\"col-md-2\">\r\n                    &nbsp;\r\n                </div>\r\n                <div class=\"col-md-5\">\r\n                    <h2>Login</h2>\r\n                    <p class=\"text-primary\">If you have Username and Password, you can use the button below to access the secured content using a\r\n                        token.</p>\r\n                    <p><a class=\"btn btn-info\" href=\"#/login\" role=\"button\">Login &raquo;</a></p>\r\n                </div>\r\n                <div class=\"col-md-4\">\r\n                    <h2>Sign Up</h2>\r\n                    <p class=\"text-primary\">Use the button below to create Username and Password to access the secured content using a token.</p>\r\n                    <p><a class=\"btn btn-info\" href=\"#/signup\" role=\"button\">Sign Up &raquo;</a></p>\r\n                </div>\r\n                <div class=\"col-md-2\">\r\n                    &nbsp;\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </section>\r\n</template>"; });
+define('text!login.html', ['module'], function(module) { module.exports = "<template>\r\n  <section>\r\n    <div class=\"container\">\r\n      <div class=\"col-sm-6 col-md-4 col-md-offset-4\">\r\n        <h2>${heading}</h2>    \r\n          <form role=\"form\" submit.delegate=\"login()\">\r\n            <div class=\"form-group\">\r\n              <label for=\"email\">Email</label>\r\n              <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n            </div>\r\n            <div class=\"form-group\">\r\n              <label for=\"password\">Password</label>\r\n              <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n            </div>\r\n            <div class=\"checkbox\">\r\n              <label>\r\n                <input type=\"checkbox\" checked.bind=\"useRefreshTokens\"> <strong>Use Refresh Tokens</strong>\r\n              </label>\r\n            </div>\r\n            <button type=\"submit\" class=\"btn btn-primary\">Login</button>\r\n          </form>        \r\n        <hr>\r\n        <div class=\"alert alert-danger\" if.bind=\"loginError\">${loginError}</div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
 define('text!logout.html', ['module'], function(module) { module.exports = "<template></template>"; });
-define('text!nav-bar.html', ['module'], function(module) { module.exports = "<template>\r\n  <nav class=\"navbar navbar-inverse navbar-fixed-top\" role=\"navigation\">\r\n    <div class=\"container\">\r\n      <div class=\"navbar-header\">\r\n        <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1\">\r\n        <span class=\"sr-only\">Toggle Navigation</span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n      </button>\r\n      </div>\r\n      <div class=\"collapse navbar-collapse\" id=\"bs-example-navbar-collapse-1\">\r\n        <ul class=\"nav navbar-nav\">\r\n          <li repeat.for=\"row of router.navigation | authFilter: isAuthenticated\" class=\"${row.isActive ? 'active' : ''}\">\r\n            <a class=\"${row.settings.class}\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1.in\" href.bind=\"row.href\">${row.title}</a>\r\n          </li>\r\n        </ul>\r\n\r\n        <ul if.bind=\"!isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n          <li><a href=\"/#/login\">Login</a></li>\r\n          <li><a href=\"/#/signup\">Signup</a></li>\r\n        </ul>\r\n\r\n        <ul if.bind=\"isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n          <li><a href=\"/#/logout\">Logout</a></li>\r\n        </ul>\r\n\r\n        <ul class=\"nav navbar-nav navbar-right\">\r\n          <li class=\"loader\" if.bind=\"router.isNavigating\">\r\n            <i class=\"fa fa-spinner fa-spin fa-2x\"></i>\r\n          </li>\r\n        </ul>\r\n      </div>\r\n    </div>\r\n  </nav>\r\n</template>"; });
+define('text!nav-bar.html', ['module'], function(module) { module.exports = "<template>\r\n  <nav class=\"navbar navbar-inverse navbar-fixed-top\" role=\"navigation\">\r\n    <div class=\"container\">\r\n      <div class=\"navbar-header\">\r\n        <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1\">\r\n        <span class=\"sr-only\">Toggle Navigation</span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n      </button>\r\n      </div>\r\n      <div class=\"collapse navbar-collapse\" id=\"bs-example-navbar-collapse-1\">\r\n        <ul class=\"nav navbar-nav\">\r\n          <li repeat.for=\"row of router.navigation | authFilter: isAuthenticated\" class=\"${row.isActive ? 'active' : ''}\">\r\n            <a class=\"${row.settings.class}\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1.in\" href.bind=\"row.href\">${row.title}</a>\r\n          </li>\r\n        </ul>\r\n\r\n        <ul if.bind=\"!isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n          <li><a href=\"/#/login\">Login</a></li>\r\n          <li><a href=\"/#/signup\">Sign Up</a></li>\r\n        </ul>\r\n\r\n        <ul if.bind=\"isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n          <li><a href=\"/#/logout\">Logout</a></li>\r\n        </ul>\r\n\r\n        <ul class=\"nav navbar-nav navbar-right\">\r\n          <li class=\"loader\" if.bind=\"router.isNavigating\">\r\n            <i class=\"fa fa-spinner fa-spin fa-2x\"></i>\r\n          </li>\r\n        </ul>\r\n      </div>\r\n    </div>\r\n  </nav>\r\n</template>"; });
 define('text!random-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"col-sm-12\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${randomQuote}</h4>\r\n        </div>\r\n        <div>\r\n          <button class=\"btn btn-primary\" click.delegate=\"getQuote()\">Refresh</button>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
 define('text!secret-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${secretQuote}</h4>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
-define('text!signup.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n\r\n      <form role=\"form\" submit.delegate=\"signup()\">\r\n        <div class=\"form-group\">\r\n          <label for=\"email\">Email</label>\r\n          <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n        </div>\r\n        <div class=\"form-group\">\r\n          <label for=\"password\">Password</label>\r\n          <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n        </div>\r\n        <button type=\"submit\" class=\"btn btn-primary\">Signup</button>\r\n      </form>\r\n      <hr>\r\n      <div class=\"alert alert-danger\" if.bind=\"signupError\">${signupError}</div>\r\n    </div>\r\n  </section>\r\n</template>"; });
+define('text!signup.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <div class=\"col-sm-6 col-md-4 col-md-offset-4\">\r\n      <h2>${heading}</h2>\r\n\r\n      <form role=\"form\" submit.delegate=\"signup()\">\r\n        <div class=\"form-group\">\r\n          <label for=\"email\">Email</label>\r\n          <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n        </div>\r\n        <div class=\"form-group\">\r\n          <label for=\"password\">Password</label>\r\n          <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n        </div>\r\n        <button type=\"submit\" class=\"btn btn-primary\">Signup</button>\r\n      </form>\r\n      <hr>\r\n      <div class=\"alert alert-danger\" if.bind=\"signupError\">${signupError}</div>\r\n    </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
 //# sourceMappingURL=app-bundle.js.map

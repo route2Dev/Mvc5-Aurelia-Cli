@@ -20,8 +20,8 @@ export class RandomQuote {
             .then(response => response.text())
             .then(data => this.secretQuote = data)            
                            
-            .catch(error => {{
+            .catch(error => {
                 console.log("Error getting quote.");
-            }});
+            });
     }
 }

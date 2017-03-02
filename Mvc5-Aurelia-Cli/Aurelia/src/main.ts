@@ -18,7 +18,7 @@ export function configure(aurelia: Aurelia) {
     .plugin('aurelia-auth', (baseConfig) => {
          baseConfig.configure(config);
     });
-
+ 
   if (environment.debug) {
     aurelia.use.developmentLogging();
   }
