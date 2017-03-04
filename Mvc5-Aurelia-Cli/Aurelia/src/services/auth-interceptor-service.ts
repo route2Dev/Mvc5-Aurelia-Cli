@@ -1,11 +1,12 @@
 import { inject, Aurelia } from 'aurelia-framework';
 import { HttpClient, Interceptor } from 'aurelia-fetch-client';
+import { Router } from 'aurelia-router';
 import { AuthService, IAuthorizationData } from './authservice';
 import { LocalStorageService } from './localStorageService';
 
-@inject(Aurelia, LocalStorageService)
+@inject(Aurelia, LocalStorageService, Router)
 export class AuthInterceptorService implements Interceptor {
-    constructor(private aurelia: Aurelia, private storage: LocalStorageService) {
+    constructor(private aurelia: Aurelia, private storage: LocalStorageService, private router: Router) {
 
     }
 
@@ -19,4 +20,10 @@ export class AuthInterceptorService implements Interceptor {
         return request;
     }
 
+    responseError(response: Response) {
+       if(response.status === 401) {
+           this.router.navigateToRoute('login');
+       }
+       return response;
+    }
 }
