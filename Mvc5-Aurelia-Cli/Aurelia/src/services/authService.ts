@@ -36,11 +36,15 @@ export interface IAuthorizationData {
 export class AuthService {
     baseUrl = "http://localhost:45933/";
 
-    authentication: IAuthentication = {
+    private _authentication: IAuthentication = {
         isAuth: false,
         userName: "",
         useRefreshTokens: false
     };
+
+    get authentication() : IAuthentication {
+        return this._authentication;
+    }
 
     externalAuthData: IExternalData = {
         provider: "",
@@ -105,8 +109,9 @@ export class AuthService {
                 
                 this.storage.set('authorizationData', authorizationData);
 
-                this.authentication.isAuth = true;
-                this.authentication.userName = loginData.userName;
+                this._authentication.isAuth = true;
+                this._authentication.userName = loginData.userName;
+                this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
 
                 return response;
             })
@@ -114,5 +119,14 @@ export class AuthService {
                 this.logout();
                 console.log("Error logging in.");
             });
+    }
+
+    intialize() {
+        var data : IAuthorizationData = JSON.parse( this.storage.get("authorizationData"));
+        if(data) {
+            this._authentication.isAuth = true;
+            this._authentication.userName = data.userName;
+            this._authentication.useRefreshTokens : data.useRefreshTokens;
+        }
     }
 }
