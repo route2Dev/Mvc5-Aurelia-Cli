@@ -10,13 +10,9 @@ export class RandomQuote {
     constructor (private httpClient: HttpClient) {        
     }
 
-    activate() {
-        this.httpClient.configure(config => {
-            config.useStandardConfiguration()
-            .withBaseUrl("http://localhost:45933/api/");
-        });
+    activate() {      
 
-        return this.httpClient.fetch("protected/random-quote")
+        return this.httpClient.fetch("api/protected/random-quote")
             .then(response => response.text())
             .then(data => this.secretQuote = data)            
                            

@@ -1,3 +1,22 @@
+define('services/localStorageService',["require", "exports"], function (require, exports) {
+    "use strict";
+    var LocalStorageService = (function () {
+        function LocalStorageService() {
+        }
+        LocalStorageService.prototype.set = function (key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        };
+        LocalStorageService.prototype.get = function (key) {
+            return localStorage.getItem(key);
+        };
+        LocalStorageService.prototype.remove = function (key) {
+            localStorage.removeItem(key);
+        };
+        return LocalStorageService;
+    }());
+    exports.LocalStorageService = LocalStorageService;
+});
+
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -7,33 +26,225 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define('app',["require", "exports", "aurelia-framework", "aurelia-auth", "aurelia-auth", "bootstrap"], function (require, exports, aurelia_framework_1, aurelia_auth_1, aurelia_auth_2) {
+define('services/authService',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "aurelia-router", "./localStorageService"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, aurelia_router_1, localStorageService_1) {
+    "use strict";
+    var AuthService = (function () {
+        function AuthService(http, storage, router) {
+            this.http = http;
+            this.storage = storage;
+            this.router = router;
+            this.baseUrl = "http://localhost:45933/";
+            this._authentication = {
+                isAuth: false,
+                userName: "",
+                useRefreshTokens: false
+            };
+            this.externalAuthData = {
+                provider: "",
+                userName: "",
+                externalAccessToken: ""
+            };
+        }
+        Object.defineProperty(AuthService.prototype, "authentication", {
+            get: function () {
+                return this._authentication;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        AuthService.prototype.status = function (response) {
+            if (response.status >= 200 && response.status < 400) {
+                return response.json().catch(function (error) { return null; });
+            }
+            console.log('status says bad request.');
+            throw response;
+        };
+        AuthService.prototype.logout = function () {
+            var _this = this;
+            return new Promise(function (resolve) {
+                console.log('logout called.');
+                _this.storage.remove('authorizationData');
+                _this.authentication.isAuth = false;
+                _this.authentication.userName = '';
+                resolve();
+            });
+        };
+        AuthService.prototype.signUp = function (registration) {
+            this.logout();
+            return this.http.fetch('api/account/register', {
+                method: 'post',
+                body: aurelia_fetch_client_1.json(registration)
+            })
+                .then(this.status)
+                .then(function (response) {
+                return response;
+            });
+        };
+        AuthService.prototype.login = function (loginData) {
+            var _this = this;
+            var content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
+            return this.http.fetch('token', {
+                method: 'post',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: content
+            })
+                .then(this.status)
+                .then(function (response) {
+                var authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
+                _this.storage.set('authorizationData', authorizationData);
+                _this._authentication.isAuth = true;
+                _this._authentication.userName = loginData.userName;
+                _this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
+                return response;
+            })
+                .catch(function (error) {
+                _this.logout();
+                console.log("Error logging in.");
+                return error;
+            });
+        };
+        AuthService.prototype.intialize = function () {
+            var data = this.storage.get("authorizationData");
+            if (data) {
+                var authorizationData = JSON.parse(data);
+                this._authentication.isAuth = true;
+                this._authentication.userName = authorizationData.userName;
+                this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
+            }
+        };
+        return AuthService;
+    }());
+    AuthService = __decorate([
+        aurelia_framework_1.inject(aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService, aurelia_router_1.Router),
+        __metadata("design:paramtypes", [aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService, aurelia_router_1.Router])
+    ], AuthService);
+    exports.AuthService = AuthService;
+});
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+define('services/auth-step',["require", "exports", "aurelia-framework", "aurelia-router", "./authService"], function (require, exports, aurelia_framework_1, aurelia_router_1, authService_1) {
+    "use strict";
+    var AuthStep = (function () {
+        function AuthStep(authService) {
+            this.authService = authService;
+        }
+        AuthStep.prototype.run = function (routingContext, next) {
+            var isLoggedIn = this.authService.authentication.isAuth;
+            var loginRoute = "/login";
+            if (!isLoggedIn && routingContext.getAllInstructions().some(function (i) { return i.config.settings.auth; })) {
+                return next.cancel(new aurelia_router_1.Redirect(loginRoute));
+            }
+            return next();
+        };
+        return AuthStep;
+    }());
+    AuthStep = __decorate([
+        aurelia_framework_1.inject(authService_1.AuthService),
+        __metadata("design:paramtypes", [authService_1.AuthService])
+    ], AuthStep);
+    exports.AuthStep = AuthStep;
+});
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+define('services/auth-interceptor-service',["require", "exports", "aurelia-framework", "aurelia-router", "./localStorageService"], function (require, exports, aurelia_framework_1, aurelia_router_1, localStorageService_1) {
+    "use strict";
+    var AuthInterceptorService = (function () {
+        function AuthInterceptorService(aurelia, storage, router) {
+            this.aurelia = aurelia;
+            this.storage = storage;
+            this.router = router;
+            this.foo = "bar";
+        }
+        AuthInterceptorService.prototype.request = function (request) {
+            console.log('auth-interceptor called.');
+            var data = this.storage.get('authorizationData');
+            if (data) {
+                console.log('auth-interceptor ' + data);
+                var authData = JSON.parse(data);
+                request.headers.append('Authorization', authData.tokenType + ' ' + authData.accessToken);
+            }
+            return request;
+        };
+        AuthInterceptorService.prototype.responseError = function (response) {
+            if (response.status === 401) {
+                this.router.navigateToRoute('login');
+            }
+            return response;
+        };
+        return AuthInterceptorService;
+    }());
+    AuthInterceptorService = __decorate([
+        aurelia_framework_1.inject(aurelia_framework_1.Aurelia, localStorageService_1.LocalStorageService, aurelia_router_1.Router),
+        __metadata("design:paramtypes", [aurelia_framework_1.Aurelia, localStorageService_1.LocalStorageService, aurelia_router_1.Router])
+    ], AuthInterceptorService);
+    exports.AuthInterceptorService = AuthInterceptorService;
+});
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+define('app',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "./services/authService", "./services/auth-step", "./services/auth-interceptor-service", "bootstrap"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, authService_1, auth_step_1, auth_interceptor_service_1) {
     "use strict";
     var App = (function () {
-        function App(fetchConfig) {
-            this.fetchConfig = fetchConfig;
+        function App(http, authService, authInterceptorService) {
+            this.authInterceptorService = authInterceptorService;
+            authService.intialize();
+            console.log(authInterceptorService.foo);
+            http.configure(function (httpConfig) {
+                httpConfig
+                    .useStandardConfiguration()
+                    .withBaseUrl('http://localhost:45933/')
+                    .withDefaults({
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .withInterceptor(authInterceptorService);
+            });
         }
         App.prototype.configureRouter = function (config, router) {
             this.router = router;
             config.title = 'Random Quotes App';
-            config.addPipelineStep('authorize', aurelia_auth_1.AuthorizeStep);
+            config.addPipelineStep('authorize', auth_step_1.AuthStep);
             config.map([
                 { route: ['', 'Home'], name: 'Home', moduleId: 'home', nav: true, title: 'Home', settings: { class: 'navbar-brand' } },
                 { route: 'random-quote', name: 'random-quote', moduleId: 'random-quote', nav: true, title: 'Random Quote' },
-                { route: 'secret-quote', name: 'secret-quote', moduleId: 'secret-quote', nav: true, title: 'Super Secret Quote', auth: true },
+                { route: 'secret-quote', name: 'secret-quote', moduleId: 'secret-quote', nav: true, title: 'Super Secret Quote', settings: { auth: true } },
                 { route: 'signup', name: 'signup', moduleId: 'signup', nav: false, title: 'Sign up', authRoute: true },
                 { route: 'login', name: 'login', moduleId: 'login', nav: false, title: 'Login', authRoute: true },
                 { route: 'logout', name: 'logout', moduleId: 'logout', nav: false, title: 'Logout', authRoute: true }
             ]);
         };
         App.prototype.activate = function () {
-            this.fetchConfig.configure();
         };
         return App;
     }());
     App = __decorate([
-        aurelia_framework_1.inject(aurelia_auth_2.FetchConfig),
-        __metadata("design:paramtypes", [aurelia_auth_2.FetchConfig])
+        aurelia_framework_1.inject(aurelia_fetch_client_1.HttpClient, authService_1.AuthService, auth_interceptor_service_1.AuthInterceptorService),
+        __metadata("design:paramtypes", [aurelia_fetch_client_1.HttpClient, authService_1.AuthService, auth_interceptor_service_1.AuthInterceptorService])
     ], App);
     exports.App = App;
 });
@@ -81,7 +292,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define('login',["require", "exports", "aurelia-framework", "aurelia-auth"], function (require, exports, aurelia_framework_1, aurelia_auth_1) {
+define('login',["require", "exports", "aurelia-framework", "./services/authService"], function (require, exports, aurelia_framework_1, authService_1) {
     "use strict";
     var Login = (function () {
         function Login(auth) {
@@ -98,7 +309,11 @@ define('login',["require", "exports", "aurelia-framework", "aurelia-auth"], func
             if (this.useRefreshTokens) {
                 creds = creds + "&client_id=" + "auAuthApp";
             }
-            return this.auth.login(creds, null)
+            var loginData = {
+                userName: this.email,
+                password: this.password
+            };
+            return this.auth.login(loginData)
                 .then(function (response) {
                 console.log("Login response: " + response);
             })
@@ -109,8 +324,8 @@ define('login',["require", "exports", "aurelia-framework", "aurelia-auth"], func
         return Login;
     }());
     Login = __decorate([
-        aurelia_framework_1.inject(aurelia_auth_1.AuthService),
-        __metadata("design:paramtypes", [aurelia_auth_1.AuthService])
+        aurelia_framework_1.inject(authService_1.AuthService),
+        __metadata("design:paramtypes", [authService_1.AuthService])
     ], Login);
     exports.Login = Login;
 });
@@ -124,14 +339,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define('logout',["require", "exports", "aurelia-auth", "aurelia-framework"], function (require, exports, aurelia_auth_1, aurelia_framework_1) {
+define('logout',["require", "exports", "aurelia-framework", "./services/authService"], function (require, exports, aurelia_framework_1, authService_1) {
     "use strict";
     var Logout = (function () {
         function Logout(authService) {
             this.authService = authService;
         }
         Logout.prototype.activate = function () {
-            this.authService.logout("#login")
+            this.authService.logout()
                 .then(function (respone) {
                 console.log("Logged Out!");
             })
@@ -142,8 +357,8 @@ define('logout',["require", "exports", "aurelia-auth", "aurelia-framework"], fun
         return Logout;
     }());
     Logout = __decorate([
-        aurelia_framework_1.inject(aurelia_auth_1.AuthService),
-        __metadata("design:paramtypes", [aurelia_auth_1.AuthService])
+        aurelia_framework_1.inject(authService_1.AuthService),
+        __metadata("design:paramtypes", [authService_1.AuthService])
     ], Logout);
     exports.Logout = Logout;
 });
@@ -182,7 +397,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define('nav-bar',["require", "exports", "aurelia-framework", "aurelia-framework", "aurelia-auth"], function (require, exports, aurelia_framework_1, aurelia_framework_2, aurelia_auth_1) {
+define('nav-bar',["require", "exports", "aurelia-framework", "aurelia-framework", "./services/authService"], function (require, exports, aurelia_framework_1, aurelia_framework_2, authService_1) {
     "use strict";
     var NavBar = (function () {
         function NavBar(auth) {
@@ -192,7 +407,7 @@ define('nav-bar',["require", "exports", "aurelia-framework", "aurelia-framework"
         }
         Object.defineProperty(NavBar.prototype, "isAuthenticated", {
             get: function () {
-                return this.auth.isAuthenticated();
+                return this.auth.authentication.isAuth;
             },
             enumerable: true,
             configurable: true
@@ -204,8 +419,8 @@ define('nav-bar',["require", "exports", "aurelia-framework", "aurelia-framework"
         __metadata("design:type", Object)
     ], NavBar.prototype, "router", void 0);
     NavBar = __decorate([
-        aurelia_framework_2.inject(aurelia_auth_1.AuthService),
-        __metadata("design:paramtypes", [aurelia_auth_1.AuthService])
+        aurelia_framework_2.inject(authService_1.AuthService),
+        __metadata("design:paramtypes", [authService_1.AuthService])
     ], NavBar);
     exports.NavBar = NavBar;
 });
@@ -232,11 +447,7 @@ define('random-quote',["require", "exports", "aurelia-framework", "aurelia-fetch
         };
         RandomQuote.prototype.getQuote = function () {
             var _this = this;
-            this.httpClient.configure(function (config) {
-                config.useStandardConfiguration()
-                    .withBaseUrl("http://localhost:45933/api/");
-            });
-            return this.httpClient.fetch("random-quote")
+            return this.httpClient.fetch("api/random-quote")
                 .then(function (response) { return response.text(); })
                 .then(function (data) { return _this.randomQuote = data; })
                 .catch(function (error) {
@@ -271,11 +482,7 @@ define('secret-quote',["require", "exports", "aurelia-framework", "aurelia-fetch
         }
         RandomQuote.prototype.activate = function () {
             var _this = this;
-            this.httpClient.configure(function (config) {
-                config.useStandardConfiguration()
-                    .withBaseUrl("http://localhost:45933/api/");
-            });
-            return this.httpClient.fetch("protected/random-quote")
+            return this.httpClient.fetch("api/protected/random-quote")
                 .then(function (response) { return response.text(); })
                 .then(function (data) { return _this.secretQuote = data; })
                 .catch(function (error) {
@@ -348,139 +555,6 @@ define('resources/index',["require", "exports"], function (require, exports) {
     function configure(config) {
     }
     exports.configure = configure;
-});
-
-define('services/localStorageService',["require", "exports"], function (require, exports) {
-    "use strict";
-    var LocalStorageService = (function () {
-        function LocalStorageService() {
-        }
-        LocalStorageService.prototype.set = function (key, data) {
-            localStorage.setItem(key, JSON.stringify(data));
-        };
-        LocalStorageService.prototype.get = function (key) {
-            return localStorage.getItem(key);
-        };
-        LocalStorageService.prototype.remove = function (key) {
-            localStorage.removeItem(key);
-        };
-        return LocalStorageService;
-    }());
-    exports.LocalStorageService = LocalStorageService;
-});
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-define('services/authService',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "./localStorageService"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, localStorageService_1) {
-    "use strict";
-    var AuthService = (function () {
-        function AuthService(http, storage) {
-            this.http = http;
-            this.storage = storage;
-            this.baseUrl = "http://localhost:45933/";
-            this.authentication = {
-                isAuth: false,
-                userName: "",
-                useRefreshTokens: false
-            };
-            this.externalAuthData = {
-                provider: "",
-                userName: "",
-                externalAccessToken: ""
-            };
-            this.http.configure(function (config) {
-                config
-                    .withBaseUrl('http://localhost:45933/');
-            });
-        }
-        AuthService.prototype.status = function (response) {
-            if (response.status >= 200 && response.status < 400) {
-                return response.json().catch(function (error) { return null; });
-            }
-            throw response;
-        };
-        AuthService.prototype.logout = function () {
-            this.storage.remove('authorizationData');
-        };
-        AuthService.prototype.signUp = function (registration) {
-            this.logout();
-            return this.http.fetch('api/account/register', {
-                method: 'post',
-                body: aurelia_fetch_client_1.json(registration)
-            })
-                .then(this.status)
-                .then(function (response) {
-                return response;
-            });
-        };
-        AuthService.prototype.login = function (loginData) {
-            var _this = this;
-            var content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
-            return this.http.fetch('token', {
-                method: 'post',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: content
-            })
-                .then(this.status)
-                .then(function (response) {
-                var authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
-                _this.storage.set('authorizationData', authorizationData);
-                _this.authentication.isAuth = true;
-                _this.authentication.userName = loginData.userName;
-                return response;
-            })
-                .catch(function (error) {
-                _this.logout();
-                console.log("Error logging in.");
-            });
-        };
-        return AuthService;
-    }());
-    AuthService = __decorate([
-        aurelia_framework_1.inject(aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService),
-        __metadata("design:paramtypes", [aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService])
-    ], AuthService);
-    exports.AuthService = AuthService;
-});
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-define('services/auth-interceptor-service',["require", "exports", "aurelia-framework", "./localStorageService"], function (require, exports, aurelia_framework_1, localStorageService_1) {
-    "use strict";
-    var AuthInterceptorService = (function () {
-        function AuthInterceptorService(aurelia, storage) {
-            this.aurelia = aurelia;
-            this.storage = storage;
-        }
-        AuthInterceptorService.prototype.request = function (request) {
-            var data = this.storage.get('authorizationData');
-            if (data) {
-                var authData = JSON.parse(data);
-                request.headers.append('Authorization', authData.accessToken);
-            }
-            return request;
-        };
-        return AuthInterceptorService;
-    }());
-    AuthInterceptorService = __decorate([
-        aurelia_framework_1.inject(aurelia_framework_1.Aurelia, localStorageService_1.LocalStorageService),
-        __metadata("design:paramtypes", [aurelia_framework_1.Aurelia, localStorageService_1.LocalStorageService])
-    ], AuthInterceptorService);
-    exports.AuthInterceptorService = AuthInterceptorService;
 });
 
 define('aurelia-auth/auth-service',['exports', 'aurelia-dependency-injection', 'aurelia-fetch-client', 'aurelia-event-aggregator', './authentication', './base-config', './oAuth1', './oAuth2', './auth-utilities'], function (exports, _aureliaDependencyInjection, _aureliaFetchClient, _aureliaEventAggregator, _authentication, _baseConfig, _oAuth, _oAuth2, _authUtilities) {

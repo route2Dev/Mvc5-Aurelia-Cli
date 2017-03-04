@@ -10,11 +10,16 @@ export class AuthInterceptorService implements Interceptor {
 
     }
 
+    foo = "bar";
+
     request(request: Request) {
+
+        console.log('auth-interceptor called.');
         var data = this.storage.get('authorizationData');
         if (data) {
+            console.log('auth-interceptor ' + data);
             let authData: IAuthorizationData = JSON.parse(data);
-            request.headers.append('Authorization', authData.accessToken);
+            request.headers.append('Authorization', authData.tokenType + ' ' + authData.accessToken);
         }
 
         return request;

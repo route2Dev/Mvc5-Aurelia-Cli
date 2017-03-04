@@ -14,13 +14,9 @@ export class RandomQuote {
         return this.getQuote();
     }
 
-    getQuote() {
-        this.httpClient.configure(config => {
-            config.useStandardConfiguration()
-            .withBaseUrl("http://localhost:45933/api/");
-        });
+    getQuote() {       
 
-        return this.httpClient.fetch("random-quote")
+        return this.httpClient.fetch("api/random-quote")
             .then(response => response.text())
             .then(data => this.randomQuote = data)                           
             .catch(error => {

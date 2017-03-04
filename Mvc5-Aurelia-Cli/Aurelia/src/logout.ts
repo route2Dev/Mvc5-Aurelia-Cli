@@ -1,12 +1,13 @@
-import {AuthService} from 'aurelia-auth';
 import {inject} from 'aurelia-framework';
+
+import {AuthService} from './services/authService';
 
 @inject(AuthService)
 export class Logout {
     constructor(private authService: AuthService) {}
 
     activate() {
-        this.authService.logout("#login")
+        this.authService.logout()
             .then(respone => {
                 console.log("Logged Out!");
             })

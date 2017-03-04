@@ -1,5 +1,5 @@
 import { inject } from 'aurelia-framework';
-import { AuthService } from 'aurelia-auth';
+import { AuthService, ILoginData } from './services/authService';
 
 interface UserInfo {
     email: string;
@@ -26,7 +26,12 @@ export class Login {
              creds = creds + "&client_id=" + "auAuthApp";
          }         
 
-        return this.auth.login(creds, null)
+        let loginData : ILoginData = { 
+            userName: this.email,
+            password: this.password
+        };
+
+        return this.auth.login(loginData)
             .then((response) => {
                 console.log("Login response: " + response);
             })

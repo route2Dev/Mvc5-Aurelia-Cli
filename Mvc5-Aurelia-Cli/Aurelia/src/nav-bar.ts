@@ -1,6 +1,6 @@
 import {bindable} from 'aurelia-framework';
 import {inject} from 'aurelia-framework';
-import {AuthService} from 'aurelia-auth';
+import {AuthService} from './services/authService';
 
 @inject(AuthService)
 export class NavBar {
@@ -12,7 +12,7 @@ export class NavBar {
     }
 
     get isAuthenticated() {
-        return this.auth.isAuthenticated();
+        return this.auth.authentication.isAuth;
     }
 }
 

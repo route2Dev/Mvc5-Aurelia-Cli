@@ -3,7 +3,9 @@ using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.OAuth;
 using Mvc5_Aurelia_Cli.Entities;
 using Mvc5_Aurelia_Cli.Services;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -81,15 +83,23 @@ namespace Mvc5_Aurelia_Cli.Providers
 
             context.OwinContext.Response.Headers.Add("Access-Control-Allow-Origin", new[] { allowedOrigin });
 
-            using (var _repo = new AuthService())
+            try
             {
-                IdentityUser user = await _repo.FindUser(context.UserName, context.Password);
-
-                if (user == null)
+                using (var _repo = new AuthService())
                 {
-                    context.SetError("invalid_grant", "The user name or password is incorrect.");
-                    return;
+                    IdentityUser user = await _repo.FindUser(context.UserName, context.Password);
+
+                    if (user == null)
+                    {
+                        context.SetError("invalid_grant", "The user name or password is incorrect.");
+                        return;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return;
             }
 
             var identity = new ClaimsIdentity(context.Options.AuthenticationType);
