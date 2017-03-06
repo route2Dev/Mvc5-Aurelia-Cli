@@ -93,7 +93,7 @@ export class AuthService {
         // data
         let content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
 
-        if(loginData.useRefreshTokens) {
+        if (loginData.useRefreshTokens) {
             content = content + "&client_id=" + this.auth.clientId;
         }
 
@@ -131,6 +131,30 @@ export class AuthService {
 
                 throw error;
             });
+    }
+
+    refreshToken() {
+        let data = this.auth.getAuthData();
+
+        if (data && data.useRefreshTokens) {
+            let content = "grant_type=refresh_token&refresh_token=" + data.refreshToken + "&client_id=" + this.auth.clientId;
+            this.auth.removeAuthData();
+
+            return this.http.fetch('token', {
+                method: 'post',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: content
+            })
+            .then(this.status)
+            .then(response => {
+                let authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: false };
+                this.auth.saveAuthData(authData);                
+            })
+            .catch(error => {
+                this.logout();
+                return error;
+            });
+        }
     }
 
     intialize() {

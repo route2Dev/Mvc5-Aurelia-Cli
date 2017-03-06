@@ -116,6 +116,28 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
                 throw error;
             });
         };
+        AuthService.prototype.refreshToken = function () {
+            var _this = this;
+            var data = this.auth.getAuthData();
+            if (data && data.useRefreshTokens) {
+                var content = "grant_type=refresh_token&refresh_token=" + data.refreshToken + "&client_id=" + this.auth.clientId;
+                this.auth.removeAuthData();
+                return this.http.fetch('token', {
+                    method: 'post',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: content
+                })
+                    .then(this.status)
+                    .then(function (response) {
+                    var authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: false };
+                    _this.auth.saveAuthData(authData);
+                })
+                    .catch(function (error) {
+                    _this.logout();
+                    return error;
+                });
+            }
+        };
         AuthService.prototype.intialize = function () {
             var data = this.auth.getAuthData();
             if (data) {
@@ -900,6 +922,20 @@ define('services/auth-filter',["require", "exports"], function (require, exports
     exports.AuthFilterValueConverter = AuthFilterValueConverter;
 });
 
+
+
+define("refresh", [],function(){});
+
+define('refresh-token',["require", "exports"], function (require, exports) {
+    "use strict";
+    var RefreshToken = (function () {
+        function RefreshToken() {
+        }
+        return RefreshToken;
+    }());
+    exports.RefreshToken = RefreshToken;
+});
+
 define('text!app.html', ['module'], function(module) { module.exports = "<template>\r\n    <require from=\"bootstrap/css/bootstrap.css\"></require>\r\n    <require from=\"./styles/main.css\"></require>\r\n    <require from='./nav-bar'></require>\r\n                \r\n    <nav-bar router.bind=\"router\"></nav-bar>\r\n    \r\n    <loading-indicator loading.bind=\"router.isNavigating || http.isRequesting || authService.isRequesting\"></loading-indicator>\r\n\r\n    <router-view></router-view>\r\n</template>"; });
 define('text!styles/main.css', ['module'], function(module) { module.exports = "body {\r\n    padding-top: 70px;\r\n  }\r\n\r\n.page-header {\r\n  border-bottom: rgb(221, 221, 221) solid 1px;\r\n}"; });
 define('text!home.html', ['module'], function(module) { module.exports = "<template>\r\n    <section>\r\n        <div class=\"jumbotron\">\r\n            <div class=\"container\">\r\n            \r\n                <div class=\"page-header text-center\">\r\n                    <h1>${heading}</h1>\r\n                    </div>\r\n                <p>${info}</p>\r\n            </div>\r\n        </div>\r\n        <div class=\"container\">\r\n            <div class=\"row\">\r\n                <div class=\"col-md-2\">\r\n                    &nbsp;\r\n                </div>\r\n                <div class=\"col-md-5\">\r\n                    <h2>Login</h2>\r\n                    <p class=\"text-primary\">If you have Username and Password, you can use the button below to access the secured content using a\r\n                        token.</p>\r\n                    <p><a class=\"btn btn-info\" href=\"#/login\" role=\"button\">Login &raquo;</a></p>\r\n                </div>\r\n                <div class=\"col-md-4\">\r\n                    <h2>Sign Up</h2>\r\n                    <p class=\"text-primary\">Use the button below to create Username and Password to access the secured content using a token.</p>\r\n                    <p><a class=\"btn btn-info\" href=\"#/signup\" role=\"button\">Sign Up &raquo;</a></p>\r\n                </div>\r\n                <div class=\"col-md-2\">\r\n                    &nbsp;\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </section>\r\n</template>"; });
@@ -909,4 +945,6 @@ define('text!nav-bar.html', ['module'], function(module) { module.exports = "<te
 define('text!random-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"col-sm-12\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${randomQuote}</h4>\r\n        </div>\r\n        <div>\r\n          <button class=\"btn btn-primary\" click.delegate=\"getQuote()\">Refresh</button>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
 define('text!secret-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${secretQuote}</h4>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
 define('text!signup.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <div class=\"col-sm-6 col-md-4 col-md-offset-4\">\r\n      <h2>${heading}</h2>\r\n\r\n      <form role=\"form\" submit.delegate=\"signup()\">\r\n        <div class=\"form-group\">\r\n          <label for=\"email\">Email</label>\r\n          <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n        </div>\r\n        <div class=\"form-group\">\r\n          <label for=\"password\">Password</label>\r\n          <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n        </div>\r\n        <button type=\"submit\" class=\"btn btn-primary\">Signup</button>\r\n      </form>\r\n      <hr>\r\n      <div class=\"alert alert-danger\" if.bind=\"signupError\">${signupError}</div>\r\n    </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
+define('text!refresh.html', ['module'], function(module) { module.exports = ""; });
+define('text!refresh-token.html', ['module'], function(module) { module.exports = "<template>\r\n    <div class=\"row\">\r\n        <section class=\"col-sm-12\">\r\n            <div class=\"container\">\r\n                <h2>Refresh Tokens</h2>\r\n            </div>\r\n</template>"; });
 //# sourceMappingURL=app-bundle.js.map
