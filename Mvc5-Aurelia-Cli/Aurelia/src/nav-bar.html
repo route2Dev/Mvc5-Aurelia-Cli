@@ -1,4 +1,5 @@
 <template>
+  <require from="./services/auth-filter"></require>
   <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
     <div class="container">
       <div class="navbar-header">
@@ -11,7 +12,7 @@
       </div>
       <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
         <ul class="nav navbar-nav">
-          <li repeat.for="row of router.navigation" class="${row.isActive ? 'active' : ''}">
+          <li repeat.for="row of router.navigation | authFilter: isAuthenticated" class="${row.isActive ? 'active' : ''}">
             <a class="${row.settings.class}" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1.in" href.bind="row.href">${row.title}</a>
           </li>
         </ul>
