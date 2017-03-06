@@ -26,13 +26,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define('services/authService',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "aurelia-router", "./localStorageService"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, aurelia_router_1, localStorageService_1) {
+define('services/authService',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "aurelia-router", "./auth-helper-service", "./localStorageService"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, aurelia_router_1, auth_helper_service_1, localStorageService_1) {
     "use strict";
     var AuthService = (function () {
-        function AuthService(http, storage, router) {
+        function AuthService(http, storage, router, auth) {
             this.http = http;
             this.storage = storage;
             this.router = router;
+            this.auth = auth;
             this._authentication = {
                 isAuth: false,
                 userName: "",
@@ -65,7 +66,7 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
             var _this = this;
             return new Promise(function (resolve) {
                 console.log('User ' + _this.authentication.userName + ' is being logged out.');
-                _this.storage.remove('authorizationData');
+                _this.auth.removeAuthData();
                 _this.authentication.isAuth = false;
                 _this.authentication.userName = '';
                 resolve();
@@ -94,7 +95,7 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
                 .then(this.status)
                 .then(function (response) {
                 var authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
-                _this.storage.set('authorizationData', authorizationData);
+                _this.auth.saveAuthData(authorizationData);
                 _this._authentication.isAuth = true;
                 _this._authentication.userName = loginData.userName;
                 _this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
@@ -108,19 +109,18 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
             });
         };
         AuthService.prototype.intialize = function () {
-            var data = this.storage.get("authorizationData");
+            var data = this.auth.getAuthData();
             if (data) {
-                var authorizationData = JSON.parse(data);
                 this._authentication.isAuth = true;
-                this._authentication.userName = authorizationData.userName;
-                this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
+                this._authentication.userName = data.userName;
+                this._authentication.useRefreshTokens = data.useRefreshTokens;
             }
         };
         return AuthService;
     }());
     AuthService = __decorate([
-        aurelia_framework_1.inject(aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService, aurelia_router_1.Router),
-        __metadata("design:paramtypes", [aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService, aurelia_router_1.Router])
+        aurelia_framework_1.inject(aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService, aurelia_router_1.Router, auth_helper_service_1.AuthHelperService),
+        __metadata("design:paramtypes", [aurelia_fetch_client_1.HttpClient, localStorageService_1.LocalStorageService, aurelia_router_1.Router, auth_helper_service_1.AuthHelperService])
     ], AuthService);
     exports.AuthService = AuthService;
 });
@@ -329,9 +329,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 define('services/auth-helper-service',["require", "exports", "aurelia-framework", "./auth-config", "./localStorageService"], function (require, exports, aurelia_framework_1, auth_config_1, localStorageService_1) {
     "use strict";
     var AuthHelperService = (function () {
-        function AuthHelperService(config, localStorageService) {
+        function AuthHelperService(config, storage) {
             this.config = config;
-            this.localStorageService = localStorageService;
+            this.storage = storage;
             this._initialUrl = "";
             this._tokenName = config.current.tokenPreix ? config.current.tokenPrefix + '_' + config.current.tokenName : config.current.tokenName;
         }
@@ -363,6 +363,16 @@ define('services/auth-helper-service',["require", "exports", "aurelia-framework"
             enumerable: true,
             configurable: true
         });
+        AuthHelperService.prototype.saveAuthData = function (authData) {
+            this.storage.set('authorizationData', authData);
+        };
+        AuthHelperService.prototype.getAuthData = function () {
+            var data = this.storage.get('authorizationData');
+            return JSON.parse(data);
+        };
+        AuthHelperService.prototype.removeAuthData = function () {
+            this.storage.remove('authorizationData');
+        };
         return AuthHelperService;
     }());
     AuthHelperService = __decorate([

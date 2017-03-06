@@ -2,6 +2,7 @@ import { inject } from 'aurelia-framework';
 import { HttpClient, json } from 'aurelia-fetch-client';
 import { Router } from 'aurelia-router';
 
+import {IAuthorizationData, AuthHelperService } from './auth-helper-service';
 import { LocalStorageService } from './localStorageService';
 
 interface IAuthentication {
@@ -25,15 +26,7 @@ export interface IRegistration extends ILoginData {
     confirmPassword: string;
 }
 
-export interface IAuthorizationData {
-    accessToken: string;
-    tokenType: string;
-    refreshToken: string;
-    userName: string;
-    useRefreshTokens: boolean;
-}
-
-@inject(HttpClient, LocalStorageService, Router)
+@inject(HttpClient, LocalStorageService, Router, AuthHelperService)
 export class AuthService {
 
     private _authentication: IAuthentication = {
@@ -54,7 +47,7 @@ export class AuthService {
 
     isRequesting = false;
 
-    constructor(private http: HttpClient, private storage: LocalStorageService, private router: Router) {
+    constructor(private http: HttpClient, private storage: LocalStorageService, private router: Router, private auth: AuthHelperService) {
     }
 
     status(response) {
@@ -72,7 +65,7 @@ export class AuthService {
     logout() {
         return new Promise(resolve => {
             console.log('User ' + this.authentication.userName + ' is being logged out.');
-            this.storage.remove('authorizationData');
+           this.auth.removeAuthData();
 
             this.authentication.isAuth = false;
             this.authentication.userName = '';
@@ -112,7 +105,7 @@ export class AuthService {
 
                 let authorizationData: IAuthorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
 
-                this.storage.set('authorizationData', authorizationData);
+                this.auth.saveAuthData(authorizationData);
 
                 this._authentication.isAuth = true;
                 this._authentication.userName = loginData.userName;
@@ -131,13 +124,13 @@ export class AuthService {
     }
 
     intialize() {
-        var data = this.storage.get("authorizationData");
+        let data : IAuthorizationData = this.auth.getAuthData();
 
         if (data) {
-            var authorizationData: IAuthorizationData = JSON.parse(data);
+            
             this._authentication.isAuth = true;
-            this._authentication.userName = authorizationData.userName;
-            this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
+            this._authentication.userName = data.userName;
+            this._authentication.useRefreshTokens = data.useRefreshTokens;
         }
     }
 }
