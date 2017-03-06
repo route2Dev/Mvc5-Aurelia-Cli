@@ -3,8 +3,8 @@ var config = {
     signupUrl: 'api/account/register',
     loginUrl: 'token',
     tokenName: 'access_token',
-    loginRedirect: "#/secret-quote"
-        
+    loginRedirect: "#/secret-quote",
+    clientId: 'AureliaAuthApp'        
 }
 
 export default config;

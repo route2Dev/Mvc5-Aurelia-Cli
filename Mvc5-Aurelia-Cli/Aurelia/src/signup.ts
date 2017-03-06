@@ -20,7 +20,7 @@ export class Signup {
 
     signup() {
 
-        var userInfo : IRegistration = { userName: this.email, password: this.password, confirmPassword: this.password };
+        var userInfo : IRegistration = { userName: this.email, password: this.password, confirmPassword: this.password, useRefreshTokens: false };
 
         return this.auth.signUp(userInfo)
             .then((response) => {

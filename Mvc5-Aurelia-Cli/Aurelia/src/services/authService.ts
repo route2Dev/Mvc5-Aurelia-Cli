@@ -2,8 +2,7 @@ import { inject } from 'aurelia-framework';
 import { HttpClient, json } from 'aurelia-fetch-client';
 import { Router } from 'aurelia-router';
 
-import {IAuthorizationData, AuthHelperService } from './auth-helper-service';
-import { LocalStorageService } from './localStorageService';
+import { IAuthorizationData, AuthHelperService } from './auth-helper-service';
 
 interface IAuthentication {
     isAuth: boolean;
@@ -20,19 +19,20 @@ interface IExternalData {
 export interface ILoginData {
     userName: string;
     password: string;
+    useRefreshTokens: boolean;
 }
 
 export interface IRegistration extends ILoginData {
     confirmPassword: string;
 }
 
-@inject(HttpClient, LocalStorageService, Router, AuthHelperService)
+@inject(HttpClient, Router, AuthHelperService)
 export class AuthService {
 
     private _authentication: IAuthentication = {
         isAuth: false,
         userName: "",
-        useRefreshTokens: false    
+        useRefreshTokens: false
     };
 
     get authentication(): IAuthentication {
@@ -47,7 +47,7 @@ export class AuthService {
 
     isRequesting = false;
 
-    constructor(private http: HttpClient, private storage: LocalStorageService, private router: Router, private auth: AuthHelperService) {
+    constructor(private http: HttpClient, private router: Router, private auth: AuthHelperService) {
     }
 
     status(response) {
@@ -65,7 +65,7 @@ export class AuthService {
     logout() {
         return new Promise(resolve => {
             console.log('User ' + this.authentication.userName + ' is being logged out.');
-           this.auth.removeAuthData();
+            this.auth.removeAuthData();
 
             this.authentication.isAuth = false;
             this.authentication.userName = '';
@@ -91,7 +91,11 @@ export class AuthService {
 
     login(loginData: ILoginData) {
         // data
-        var content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
+        let content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
+
+        if(loginData.useRefreshTokens) {
+            content = content + "&client_id=" + this.auth.clientId;
+        }
 
         this.isRequesting = true;
 
@@ -103,7 +107,13 @@ export class AuthService {
             .then(this.status)
             .then((response) => {
 
-                let authorizationData: IAuthorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
+                let authorizationData: IAuthorizationData;
+
+                if (loginData.useRefreshTokens) {
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: false };
+                } else {
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
+                }
 
                 this.auth.saveAuthData(authorizationData);
 
@@ -117,17 +127,17 @@ export class AuthService {
             })
             .catch(error => {
                 this.isRequesting = false;
-                this.logout();                                  
+                this.logout();
 
                 throw error;
             });
     }
 
     intialize() {
-        let data : IAuthorizationData = this.auth.getAuthData();
+        let data: IAuthorizationData = this.auth.getAuthData();
 
         if (data) {
-            
+
             this._authentication.isAuth = true;
             this._authentication.userName = data.userName;
             this._authentication.useRefreshTokens = data.useRefreshTokens;

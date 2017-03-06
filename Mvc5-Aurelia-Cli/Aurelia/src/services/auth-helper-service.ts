@@ -36,6 +36,10 @@ export class AuthHelperService {
         return this.config.current.logoutRedirect;
     }
 
+    get clientId() {
+        return this.config.current.clientId;
+    }
+
     saveAuthData(authData: IAuthorizationData) {
         this.storage.set('authorizationData', authData);
     }

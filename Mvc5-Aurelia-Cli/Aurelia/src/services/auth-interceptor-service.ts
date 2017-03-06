@@ -1,23 +1,25 @@
 import { inject, Aurelia } from 'aurelia-framework';
 import { HttpClient, Interceptor } from 'aurelia-fetch-client';
 import { Router } from 'aurelia-router';
-import { AuthService, IAuthorizationData } from './authservice';
+import { AuthHelperService } from './auth-helper-service';
+import { AuthService } from './authservice';
 import { LocalStorageService } from './localStorageService';
 
-@inject(Aurelia, LocalStorageService, Router)
+@inject(Aurelia, AuthHelperService, Router)
 export class AuthInterceptorService implements Interceptor {
-    constructor(private aurelia: Aurelia, private storage: LocalStorageService, private router: Router) {
-
+    constructor(private aurelia: Aurelia, private auth: AuthHelperService, private router: Router) {
     }
 
     request(request: Request) {
 
         console.log('auth-interceptor called.');
-        var data = this.storage.get('authorizationData');
+        
+        let data = this.auth.getAuthData();
+        
         if (data) {
-            console.log('auth-interceptor ' + data);
-            let authData: IAuthorizationData = JSON.parse(data);
-            request.headers.append('Authorization', authData.tokenType + ' ' + authData.accessToken);
+            console.log('auth-interceptor: ' + data.tokenType + ' ' + data.accessToken);
+            
+            request.headers.append('Authorization', data.tokenType + ' ' + data.accessToken);
         }
 
         return request;
