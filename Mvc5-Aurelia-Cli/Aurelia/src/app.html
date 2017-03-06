@@ -4,8 +4,8 @@
     <require from='./nav-bar'></require>
                 
     <nav-bar router.bind="router"></nav-bar>
+    
+    <loading-indicator loading.bind="router.isNavigating || http.isRequesting || authService.isRequesting"></loading-indicator>
 
-    <!--<div class="container">-->
-        <router-view></router-view>
-    <!--</div>-->
+    <router-view></router-view>
 </template>

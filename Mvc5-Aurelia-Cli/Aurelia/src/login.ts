@@ -1,12 +1,14 @@
 import { inject } from 'aurelia-framework';
+import { Router, Redirect } from 'aurelia-router';
 import { AuthService, ILoginData } from './services/authService';
+import { AuthHelperService } from './services/auth-helper-service';
 
 interface UserInfo {
     email: string;
     password: string;
 }
 
-@inject(AuthService)
+@inject(AuthService, AuthHelperService, Router)
 export class Login {
     heading = "Login";
 
@@ -16,27 +18,23 @@ export class Login {
 
     loginError = "";
 
-    constructor(private auth: AuthService) {
+    constructor(private auth: AuthService, private helper: AuthHelperService, private router: Router) {
     }
 
-    login() {             
-         var creds = "grant_type=password&username=" + this.email + "&password=" + this.password;
-
-         if(this.useRefreshTokens) {
-             creds = creds + "&client_id=" + "auAuthApp";
-         }         
-
+    login() {                  
         let loginData : ILoginData = { 
             userName: this.email,
             password: this.password
         };
 
         return this.auth.login(loginData)
-            .then((response) => {
-                console.log("Login response: " + response);
+            .then(response => {
+                let redirect = new Redirect(this.helper.loginRedirect);
+                redirect.navigate(this.router);
             })
             .catch(error => {
-                this.loginError = error.response;
+                this.loginError = error;
+                console.log(this.loginError);
             });
     }
 }

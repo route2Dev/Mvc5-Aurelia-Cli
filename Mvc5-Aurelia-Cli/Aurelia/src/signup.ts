@@ -1,5 +1,5 @@
 import { inject } from 'aurelia-framework';
-import { AuthService } from 'aurelia-auth';
+import { AuthService, IRegistration } from './services/authService';
 
 interface UserInfo {
     email: string;
@@ -20,9 +20,9 @@ export class Signup {
 
     signup() {
 
-        var userInfo = { userName: this.email, password: this.password, confirmPassword: this.password };
+        var userInfo : IRegistration = { userName: this.email, password: this.password, confirmPassword: this.password };
 
-        return this.auth.signup(userInfo, "", "")
+        return this.auth.signUp(userInfo)
             .then((response) => {
                 console.log("Signed Up!");
             })

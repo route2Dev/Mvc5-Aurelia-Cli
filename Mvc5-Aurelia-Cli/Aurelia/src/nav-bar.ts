@@ -14,6 +14,10 @@ export class NavBar {
     get isAuthenticated() {
         return this.auth.authentication.isAuth;
     }
+
+    get userName() {
+        return this.auth.authentication.userName;
+    }
 }
 
 

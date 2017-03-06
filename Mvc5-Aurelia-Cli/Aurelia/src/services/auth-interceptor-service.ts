@@ -10,8 +10,6 @@ export class AuthInterceptorService implements Interceptor {
 
     }
 
-    foo = "bar";
-
     request(request: Request) {
 
         console.log('auth-interceptor called.');
@@ -27,6 +25,7 @@ export class AuthInterceptorService implements Interceptor {
 
     responseError(response: Response) {
        if(response.status === 401) {
+           console.log('auth-Interceptor-Service redirecting request.');
            this.router.navigateToRoute('login');
        }
        return response;

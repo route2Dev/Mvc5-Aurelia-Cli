@@ -10,18 +10,20 @@ import { HttpClient } from 'aurelia-fetch-client';
 import { AuthService } from './services/authService';
 import { AuthStep } from './services/auth-step';
 import { AuthInterceptorService } from './services/auth-interceptor-service';
+import { AuthConfig } from './services/auth-config';
 
-@inject(HttpClient, AuthService, AuthInterceptorService)
+import config from './auth-config';
+
+@inject(HttpClient, AuthConfig, AuthService, AuthInterceptorService)
 // @inject(FetchConfig)
 export class App {
     router: Router;
 
     // constructor(private fetchConfig: FetchConfig) {
-    constructor(http: HttpClient, authService: AuthService, private authInterceptorService: AuthInterceptorService) {
+    constructor(http: HttpClient, private authConfig: AuthConfig, authService: AuthService, private authInterceptorService: AuthInterceptorService) {
         
-        authService.intialize();        
-
-        console.log(authInterceptorService.foo);
+        authConfig.configure(config);
+        authService.intialize();
 
         http.configure(httpConfig => {
             httpConfig
@@ -39,7 +41,7 @@ export class App {
 
     configureRouter(config: RouterConfiguration, router: Router) {
         this.router = router;
-        config.title = 'Random Quotes App';
+        config.title = 'Aurelia Quotes App';
 
         // Here we hook into the authorize extensibility point
         // to add a route filter so that we can require authentication

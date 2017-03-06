@@ -35,12 +35,11 @@ export interface IAuthorizationData {
 
 @inject(HttpClient, LocalStorageService, Router)
 export class AuthService {
-    baseUrl = "http://localhost:45933/";
 
     private _authentication: IAuthentication = {
         isAuth: false,
         userName: "",
-        useRefreshTokens: false
+        useRefreshTokens: false    
     };
 
     get authentication(): IAuthentication {
@@ -53,22 +52,28 @@ export class AuthService {
         externalAccessToken: ""
     };
 
-    constructor(private http: HttpClient, private storage: LocalStorageService, private router: Router) {    
+    isRequesting = false;
+
+    constructor(private http: HttpClient, private storage: LocalStorageService, private router: Router) {
     }
 
     status(response) {
+        console.log('status() returned: ' + response.status);
+
         if (response.status >= 200 && response.status < 400) {
             return response.json().catch(error => null);
         }
-        console.log('status says bad request.');
-        throw response;
+
+        return response.json().then((errorMesage) => {
+            return Promise.reject(new Error(errorMesage.error_description));
+        });
     }
 
     logout() {
         return new Promise(resolve => {
-            console.log('logout called.');
+            console.log('User ' + this.authentication.userName + ' is being logged out.');
             this.storage.remove('authorizationData');
-            
+
             this.authentication.isAuth = false;
             this.authentication.userName = '';
 
@@ -95,6 +100,8 @@ export class AuthService {
         // data
         var content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
 
+        this.isRequesting = true;
+
         return this.http.fetch('token', {
             method: 'post',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -111,18 +118,21 @@ export class AuthService {
                 this._authentication.userName = loginData.userName;
                 this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
 
+                this.isRequesting = false;
+
                 return response;
             })
             .catch(error => {
-                this.logout();
-                console.log("Error logging in.");
-                return error;
+                this.isRequesting = false;
+                this.logout();                                  
+
+                throw error;
             });
     }
 
     intialize() {
         var data = this.storage.get("authorizationData");
-        //var data : IAuthorizationData = JSON.parse( this.storage.get("authorizationData"));
+
         if (data) {
             var authorizationData: IAuthorizationData = JSON.parse(data);
             this._authentication.isAuth = true;

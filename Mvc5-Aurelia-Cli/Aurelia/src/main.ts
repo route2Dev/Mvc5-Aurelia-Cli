@@ -14,11 +14,7 @@ import environment from './environment';
 export function configure(aurelia: Aurelia) {
   aurelia.use
     .standardConfiguration()
-    .feature('resources')
-    .plugin('aurelia-auth', (baseConfig) => {
-         baseConfig.configure(config);
-    });
-
+    .feature('resources');
 
   if (environment.debug) {
     aurelia.use.developmentLogging();
