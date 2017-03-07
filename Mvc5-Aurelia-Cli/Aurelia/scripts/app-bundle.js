@@ -1,160 +1,3 @@
-define('services/localStorageService',["require", "exports"], function (require, exports) {
-    "use strict";
-    var LocalStorageService = (function () {
-        function LocalStorageService() {
-        }
-        LocalStorageService.prototype.set = function (key, data) {
-            localStorage.setItem(key, JSON.stringify(data));
-        };
-        LocalStorageService.prototype.get = function (key) {
-            return localStorage.getItem(key);
-        };
-        LocalStorageService.prototype.remove = function (key) {
-            localStorage.removeItem(key);
-        };
-        return LocalStorageService;
-    }());
-    exports.LocalStorageService = LocalStorageService;
-});
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-define('services/authService',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "aurelia-router", "./auth-helper-service"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, aurelia_router_1, auth_helper_service_1) {
-    "use strict";
-    var AuthService = (function () {
-        function AuthService(http, router, auth) {
-            this.http = http;
-            this.router = router;
-            this.auth = auth;
-            this._authentication = {
-                isAuth: false,
-                userName: "",
-                useRefreshTokens: false
-            };
-            this.externalAuthData = {
-                provider: "",
-                userName: "",
-                externalAccessToken: ""
-            };
-            this.isRequesting = false;
-        }
-        Object.defineProperty(AuthService.prototype, "authentication", {
-            get: function () {
-                return this._authentication;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        AuthService.prototype.status = function (response) {
-            console.log('status() returned: ' + response.status);
-            if (response.status >= 200 && response.status < 400) {
-                return response.json().catch(function (error) { return null; });
-            }
-            return response.json().then(function (errorMesage) {
-                return Promise.reject(new Error(errorMesage.error_description));
-            });
-        };
-        AuthService.prototype.logout = function () {
-            var _this = this;
-            return new Promise(function (resolve) {
-                console.log('User ' + _this.authentication.userName + ' is being logged out.');
-                _this.auth.removeAuthData();
-                _this.authentication.isAuth = false;
-                _this.authentication.userName = '';
-                resolve();
-            });
-        };
-        AuthService.prototype.signUp = function (registration) {
-            this.logout();
-            return this.http.fetch('api/account/register', {
-                method: 'post',
-                body: aurelia_fetch_client_1.json(registration)
-            })
-                .then(this.status)
-                .then(function (response) {
-                return response;
-            });
-        };
-        AuthService.prototype.login = function (loginData) {
-            var _this = this;
-            var content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
-            if (loginData.useRefreshTokens) {
-                content = content + "&client_id=" + this.auth.clientId;
-            }
-            this.isRequesting = true;
-            return this.http.fetch('token', {
-                method: 'post',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: content
-            })
-                .then(this.status)
-                .then(function (response) {
-                var authorizationData;
-                if (loginData.useRefreshTokens) {
-                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: false };
-                }
-                else {
-                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
-                }
-                _this.auth.saveAuthData(authorizationData);
-                _this._authentication.isAuth = true;
-                _this._authentication.userName = loginData.userName;
-                _this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
-                _this.isRequesting = false;
-                return response;
-            })
-                .catch(function (error) {
-                _this.isRequesting = false;
-                _this.logout();
-                throw error;
-            });
-        };
-        AuthService.prototype.refreshToken = function () {
-            var _this = this;
-            var data = this.auth.getAuthData();
-            if (data && data.useRefreshTokens) {
-                var content = "grant_type=refresh_token&refresh_token=" + data.refreshToken + "&client_id=" + this.auth.clientId;
-                this.auth.removeAuthData();
-                return this.http.fetch('token', {
-                    method: 'post',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: content
-                })
-                    .then(this.status)
-                    .then(function (response) {
-                    var authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: false };
-                    _this.auth.saveAuthData(authData);
-                })
-                    .catch(function (error) {
-                    _this.logout();
-                    return error;
-                });
-            }
-        };
-        AuthService.prototype.intialize = function () {
-            var data = this.auth.getAuthData();
-            if (data) {
-                this._authentication.isAuth = true;
-                this._authentication.userName = data.userName;
-                this._authentication.useRefreshTokens = data.useRefreshTokens;
-            }
-        };
-        return AuthService;
-    }());
-    AuthService = __decorate([
-        aurelia_framework_1.inject(aurelia_fetch_client_1.HttpClient, aurelia_router_1.Router, auth_helper_service_1.AuthHelperService),
-        __metadata("design:paramtypes", [aurelia_fetch_client_1.HttpClient, aurelia_router_1.Router, auth_helper_service_1.AuthHelperService])
-    ], AuthService);
-    exports.AuthService = AuthService;
-});
-
 define('services/auth-config',["require", "exports"], function (require, exports) {
     "use strict";
     var AuthConfig = (function () {
@@ -347,6 +190,25 @@ define('services/auth-config',["require", "exports"], function (require, exports
     exports.AuthConfig = AuthConfig;
 });
 
+define('services/localStorageService',["require", "exports"], function (require, exports) {
+    "use strict";
+    var LocalStorageService = (function () {
+        function LocalStorageService() {
+        }
+        LocalStorageService.prototype.set = function (key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        };
+        LocalStorageService.prototype.get = function (key) {
+            return localStorage.getItem(key);
+        };
+        LocalStorageService.prototype.remove = function (key) {
+            localStorage.removeItem(key);
+        };
+        return LocalStorageService;
+    }());
+    exports.LocalStorageService = LocalStorageService;
+});
+
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -417,6 +279,145 @@ define('services/auth-helper-service',["require", "exports", "aurelia-framework"
         __metadata("design:paramtypes", [auth_config_1.AuthConfig, localStorageService_1.LocalStorageService])
     ], AuthHelperService);
     exports.AuthHelperService = AuthHelperService;
+});
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+define('services/authService',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "aurelia-router", "./auth-helper-service"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, aurelia_router_1, auth_helper_service_1) {
+    "use strict";
+    var AuthService = (function () {
+        function AuthService(http, router, auth) {
+            this.http = http;
+            this.router = router;
+            this.auth = auth;
+            this._authentication = {
+                isAuth: false,
+                userName: "",
+                useRefreshTokens: false
+            };
+            this.externalAuthData = {
+                provider: "",
+                userName: "",
+                externalAccessToken: ""
+            };
+            this.isRequesting = false;
+        }
+        Object.defineProperty(AuthService.prototype, "authentication", {
+            get: function () {
+                return this._authentication;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        AuthService.prototype.status = function (response) {
+            console.log('status() returned: ' + response.status);
+            if (response.status >= 200 && response.status < 400) {
+                return response.json().catch(function (error) { return null; });
+            }
+            return response.json().then(function (errorMesage) {
+                return Promise.reject(new Error(errorMesage.error_description));
+            });
+        };
+        AuthService.prototype.logout = function () {
+            var _this = this;
+            return new Promise(function (resolve) {
+                console.log('User ' + _this.authentication.userName + ' is being logged out.');
+                _this.auth.removeAuthData();
+                _this.authentication.isAuth = false;
+                _this.authentication.userName = '';
+                resolve();
+            });
+        };
+        AuthService.prototype.signUp = function (registration) {
+            this.logout();
+            return this.http.fetch('api/account/register', {
+                method: 'post',
+                body: aurelia_fetch_client_1.json(registration)
+            })
+                .then(this.status)
+                .then(function (response) {
+                return response;
+            });
+        };
+        AuthService.prototype.login = function (loginData) {
+            var _this = this;
+            var content = "grant_type=password&username=" + loginData.userName + "&password=" + loginData.password;
+            if (loginData.useRefreshTokens) {
+                content = content + "&client_id=" + this.auth.clientId;
+            }
+            this.isRequesting = true;
+            return this.http.fetch('token', {
+                method: 'post',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: content
+            })
+                .then(this.status)
+                .then(function (response) {
+                var authorizationData;
+                if (loginData.useRefreshTokens) {
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true };
+                }
+                else {
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
+                }
+                _this.auth.saveAuthData(authorizationData);
+                _this._authentication.isAuth = true;
+                _this._authentication.userName = loginData.userName;
+                _this._authentication.useRefreshTokens = authorizationData.useRefreshTokens;
+                _this.isRequesting = false;
+                return response;
+            })
+                .catch(function (error) {
+                _this.isRequesting = false;
+                _this.logout();
+                throw error;
+            });
+        };
+        AuthService.prototype.refreshToken = function () {
+            var _this = this;
+            var data = this.auth.getAuthData();
+            if (data && data.useRefreshTokens) {
+                var content = "grant_type=refresh_token&refresh_token=" + data.refreshToken + "&client_id=" + this.auth.clientId;
+                this.auth.removeAuthData();
+                return this.http.fetch('token', {
+                    method: 'post',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: content
+                })
+                    .then(this.status)
+                    .then(function (response) {
+                    var authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true };
+                    _this.auth.saveAuthData(authData);
+                    return response;
+                })
+                    .catch(function (error) {
+                    _this.logout();
+                    return error;
+                });
+            }
+        };
+        AuthService.prototype.intialize = function () {
+            var data = this.auth.getAuthData();
+            if (data) {
+                this._authentication.isAuth = true;
+                this._authentication.userName = data.userName;
+                this._authentication.useRefreshTokens = data.useRefreshTokens;
+            }
+        };
+        return AuthService;
+    }());
+    AuthService = __decorate([
+        aurelia_framework_1.inject(aurelia_fetch_client_1.HttpClient, aurelia_router_1.Router, auth_helper_service_1.AuthHelperService),
+        __metadata("design:paramtypes", [aurelia_fetch_client_1.HttpClient, aurelia_router_1.Router, auth_helper_service_1.AuthHelperService])
+    ], AuthService);
+    exports.AuthService = AuthService;
 });
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
@@ -550,6 +551,7 @@ define('app',["require", "exports", "aurelia-framework", "aurelia-fetch-client",
                 { route: ['', 'Home'], name: 'Home', moduleId: 'home', nav: true, title: 'Home', settings: { class: 'navbar-brand' } },
                 { route: 'random-quote', name: 'random-quote', moduleId: 'random-quote', nav: true, title: 'Random Quote' },
                 { route: 'secret-quote', name: 'secret-quote', moduleId: 'secret-quote', nav: true, title: 'Super Secret Quote', settings: { auth: true } },
+                { route: 'refresh-token', name: 'refresh-token', moduleId: 'refresh-token', nav: true, title: 'Refresh Token', settings: { auth: true } },
                 { route: 'signup', name: 'signup', moduleId: 'signup', nav: false, title: 'Sign up', authRoute: true },
                 { route: 'login', name: 'login', moduleId: 'login', nav: false, title: 'Login', authRoute: true },
                 { route: 'logout', name: 'logout', moduleId: 'logout', nav: false, title: 'Logout', authRoute: true }
@@ -613,7 +615,8 @@ define('login',["require", "exports", "aurelia-framework", "aurelia-router", "./
             var _this = this;
             var loginData = {
                 userName: this.email,
-                password: this.password
+                password: this.password,
+                useRefreshTokens: this.useRefreshTokens
             };
             return this.auth.login(loginData)
                 .then(function (response) {
@@ -785,6 +788,58 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+define('refresh-token',["require", "exports", "aurelia-framework", "./services/authService"], function (require, exports, aurelia_framework_1, authService_1) {
+    "use strict";
+    var RefreshToken = (function () {
+        function RefreshToken(auth) {
+            this.auth = auth;
+        }
+        Object.defineProperty(RefreshToken.prototype, "tokenRefreshed", {
+            get: function () {
+                return this._tokenRefreshed;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(RefreshToken.prototype, "tokenResponse", {
+            get: function () {
+                return this._tokenResponse;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        RefreshToken.prototype.activate = function () {
+            console.log('Use RefreshTokens: ' + this.auth.authentication.useRefreshTokens);
+            this._tokenRefreshed = false;
+            this._tokenResponse = null;
+        };
+        RefreshToken.prototype.refreshToken = function () {
+            var _this = this;
+            this.auth.refreshToken()
+                .then(function (response) {
+                console.log('Refresh-Token: ' + response.access_token);
+                _this._tokenRefreshed = true;
+                _this._tokenResponse = response;
+            });
+        };
+        return RefreshToken;
+    }());
+    RefreshToken = __decorate([
+        aurelia_framework_1.inject(authService_1.AuthService),
+        __metadata("design:paramtypes", [authService_1.AuthService])
+    ], RefreshToken);
+    exports.RefreshToken = RefreshToken;
+});
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
 define('secret-quote',["require", "exports", "aurelia-framework", "aurelia-fetch-client"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1) {
     "use strict";
     var RandomQuote = (function () {
@@ -863,12 +918,44 @@ define('todo',["require", "exports"], function (require, exports) {
     exports.Todo = Todo;
 });
 
+define('converters/limit-to',["require", "exports"], function (require, exports) {
+    "use strict";
+    var LimitToValueConverter = (function () {
+        function LimitToValueConverter() {
+        }
+        LimitToValueConverter.prototype.toView = function (value, length) {
+            if (value.length < length) {
+                return value;
+            }
+            return value.substr(0, length);
+        };
+        return LimitToValueConverter;
+    }());
+    exports.LimitToValueConverter = LimitToValueConverter;
+});
+
 define('resources/index',["require", "exports"], function (require, exports) {
     "use strict";
     function configure(config) {
         config.globalResources(['./elements/loading-indicator']);
     }
     exports.configure = configure;
+});
+
+define('services/auth-filter',["require", "exports"], function (require, exports) {
+    "use strict";
+    var AuthFilterValueConverter = (function () {
+        function AuthFilterValueConverter() {
+        }
+        AuthFilterValueConverter.prototype.toView = function (routes, isLoggedIn) {
+            console.log(isLoggedIn);
+            if (isLoggedIn)
+                return routes;
+            return routes.filter(function (r) { return !r.config.settings.auth; });
+        };
+        return AuthFilterValueConverter;
+    }());
+    exports.AuthFilterValueConverter = AuthFilterValueConverter;
 });
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
@@ -906,36 +993,6 @@ define('resources/elements/loading-indicator',["require", "exports", "nprogress"
     exports.LoadingIndicator = LoadingIndicator;
 });
 
-define('services/auth-filter',["require", "exports"], function (require, exports) {
-    "use strict";
-    var AuthFilterValueConverter = (function () {
-        function AuthFilterValueConverter() {
-        }
-        AuthFilterValueConverter.prototype.toView = function (routes, isLoggedIn) {
-            console.log(isLoggedIn);
-            if (isLoggedIn)
-                return routes;
-            return routes.filter(function (r) { return !r.config.settings.auth; });
-        };
-        return AuthFilterValueConverter;
-    }());
-    exports.AuthFilterValueConverter = AuthFilterValueConverter;
-});
-
-
-
-define("refresh", [],function(){});
-
-define('refresh-token',["require", "exports"], function (require, exports) {
-    "use strict";
-    var RefreshToken = (function () {
-        function RefreshToken() {
-        }
-        return RefreshToken;
-    }());
-    exports.RefreshToken = RefreshToken;
-});
-
 define('text!app.html', ['module'], function(module) { module.exports = "<template>\r\n    <require from=\"bootstrap/css/bootstrap.css\"></require>\r\n    <require from=\"./styles/main.css\"></require>\r\n    <require from='./nav-bar'></require>\r\n                \r\n    <nav-bar router.bind=\"router\"></nav-bar>\r\n    \r\n    <loading-indicator loading.bind=\"router.isNavigating || http.isRequesting || authService.isRequesting\"></loading-indicator>\r\n\r\n    <router-view></router-view>\r\n</template>"; });
 define('text!styles/main.css', ['module'], function(module) { module.exports = "body {\r\n    padding-top: 70px;\r\n  }\r\n\r\n.page-header {\r\n  border-bottom: rgb(221, 221, 221) solid 1px;\r\n}"; });
 define('text!home.html', ['module'], function(module) { module.exports = "<template>\r\n    <section>\r\n        <div class=\"jumbotron\">\r\n            <div class=\"container\">\r\n            \r\n                <div class=\"page-header text-center\">\r\n                    <h1>${heading}</h1>\r\n                    </div>\r\n                <p>${info}</p>\r\n            </div>\r\n        </div>\r\n        <div class=\"container\">\r\n            <div class=\"row\">\r\n                <div class=\"col-md-2\">\r\n                    &nbsp;\r\n                </div>\r\n                <div class=\"col-md-5\">\r\n                    <h2>Login</h2>\r\n                    <p class=\"text-primary\">If you have Username and Password, you can use the button below to access the secured content using a\r\n                        token.</p>\r\n                    <p><a class=\"btn btn-info\" href=\"#/login\" role=\"button\">Login &raquo;</a></p>\r\n                </div>\r\n                <div class=\"col-md-4\">\r\n                    <h2>Sign Up</h2>\r\n                    <p class=\"text-primary\">Use the button below to create Username and Password to access the secured content using a token.</p>\r\n                    <p><a class=\"btn btn-info\" href=\"#/signup\" role=\"button\">Sign Up &raquo;</a></p>\r\n                </div>\r\n                <div class=\"col-md-2\">\r\n                    &nbsp;\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </section>\r\n</template>"; });
@@ -943,8 +1000,7 @@ define('text!login.html', ['module'], function(module) { module.exports = "<temp
 define('text!logout.html', ['module'], function(module) { module.exports = "<template></template>"; });
 define('text!nav-bar.html', ['module'], function(module) { module.exports = "<template>\r\n  <require from=\"./services/auth-filter\"></require>\r\n  <nav class=\"navbar navbar-inverse navbar-fixed-top\" role=\"navigation\">\r\n    <div class=\"container\">\r\n      <div class=\"navbar-header\">\r\n        <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1\">\r\n        <span class=\"sr-only\">Toggle Navigation</span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n        <span class=\"icon-bar\"></span>\r\n      </button>\r\n      </div>\r\n      <div class=\"collapse navbar-collapse\" id=\"bs-example-navbar-collapse-1\">\r\n        <ul class=\"nav navbar-nav\">\r\n          <li repeat.for=\"row of router.navigation | authFilter: isAuthenticated\" class=\"${row.isActive ? 'active' : ''}\">\r\n            <a class=\"${row.settings.class}\" data-toggle=\"collapse\" data-target=\"#bs-example-navbar-collapse-1.in\" href.bind=\"row.href\">${row.title}</a>\r\n          </li>\r\n        </ul>\r\n\r\n        <ul if.bind=\"!isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n          <li><a href=\"/#/login\">Login</a></li>\r\n          <li><a href=\"/#/signup\">Sign Up</a></li>\r\n        </ul>\r\n\r\n        <ul if.bind=\"isAuthenticated\" class=\"nav navbar-nav navbar-right\">\r\n          <li><a href=\"#\">Welcome ${userName}</a>/li>\r\n          <li><a href=\"/#/logout\">Logout</a></li>\r\n        </ul>\r\n\r\n        <ul class=\"nav navbar-nav navbar-right\">\r\n          <li class=\"loader\" if.bind=\"router.isNavigating\">\r\n            <i class=\"fa fa-spinner fa-spin fa-2x\"></i>\r\n          </li>\r\n        </ul>\r\n      </div>\r\n    </div>\r\n  </nav>\r\n</template>"; });
 define('text!random-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"col-sm-12\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${randomQuote}</h4>\r\n        </div>\r\n        <div>\r\n          <button class=\"btn btn-primary\" click.delegate=\"getQuote()\">Refresh</button>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
+define('text!refresh-token.html', ['module'], function(module) { module.exports = "<template>\r\n    <require from=\"./converters/limit-to\"></require>\r\n    <div class=\"row\">\r\n        <section class=\"col-sm-12\">\r\n            <div class=\"container\">\r\n                <h2>Refresh Tokens</h2>\r\n                <p if.bind=\"!auth.authentication.useRefreshTokens\"><strong>${auth.authentication.userName}</strong> has disabled <strong>Refresh Tokens</strong> once logged in, you can not\r\n                    refresh tokens.</p>\r\n                <div if.bind=\"auth.authentication.useRefreshTokens\">\r\n                    <p class=\"text-success\">Use this view to obtain new access token using the refresh token.</p>\r\n                    <p>User <strong>${auth.authentication.userName}</strong> has enabled <strong>Refresh Tokens</strong> once logged in, to\r\n                        refresh your current access token click on the button below.</p>\r\n                    <button class=\"btn btn-lg btn-info btn-block\" type=\"submit\" click.delegate=\"refreshToken()\">Refresh Token</button>\r\n                </div>\r\n                <div if.bind=\"tokenRefreshed\" style=\"margin-top:10px;\">\r\n                    <div class=\"panel panel-success\">\r\n                        <div class=\"panel-heading\">\r\n                            <h3 class=\"panel-title\">Successfully refreshed Access Token</h3>\r\n                        </div>\r\n                        <div class=\"panel-body\">\r\n                            <p>Access_token: ${tokenResponse.access_token | limitTo : 30}....</p>\r\n                            <p><a href=\"#/secret-quote\">Click here to view a secret quote using the new Access Token</a></p>\r\n                        </div>\r\n                    </div>\r\n\r\n                </div>\r\n            </div>\r\n</template>"; });
 define('text!secret-quote.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <h2>${heading}</h2>\r\n      <div class=\"row au-stagger\">\r\n        <div class=\"well\">\r\n          <h4>${secretQuote}</h4>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
 define('text!signup.html', ['module'], function(module) { module.exports = "<template>\r\n  <section class=\"au-animate\">\r\n    <div class=\"container\">\r\n      <div class=\"col-sm-6 col-md-4 col-md-offset-4\">\r\n      <h2>${heading}</h2>\r\n\r\n      <form role=\"form\" submit.delegate=\"signup()\">\r\n        <div class=\"form-group\">\r\n          <label for=\"email\">Email</label>\r\n          <input type=\"text\" value.bind=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email\">\r\n        </div>\r\n        <div class=\"form-group\">\r\n          <label for=\"password\">Password</label>\r\n          <input type=\"password\" value.bind=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\r\n        </div>\r\n        <button type=\"submit\" class=\"btn btn-primary\">Signup</button>\r\n      </form>\r\n      <hr>\r\n      <div class=\"alert alert-danger\" if.bind=\"signupError\">${signupError}</div>\r\n    </div>\r\n    </div>\r\n  </section>\r\n</template>"; });
-define('text!refresh.html', ['module'], function(module) { module.exports = ""; });
-define('text!refresh-token.html', ['module'], function(module) { module.exports = "<template>\r\n    <div class=\"row\">\r\n        <section class=\"col-sm-12\">\r\n            <div class=\"container\">\r\n                <h2>Refresh Tokens</h2>\r\n            </div>\r\n</template>"; });
 //# sourceMappingURL=app-bundle.js.map

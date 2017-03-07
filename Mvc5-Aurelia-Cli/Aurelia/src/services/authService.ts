@@ -110,7 +110,7 @@ export class AuthService {
                 let authorizationData: IAuthorizationData;
 
                 if (loginData.useRefreshTokens) {
-                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: false };
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true };
                 } else {
                     authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
                 }
@@ -147,8 +147,10 @@ export class AuthService {
             })
             .then(this.status)
             .then(response => {
-                let authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: false };
-                this.auth.saveAuthData(authData);                
+                let authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true };
+                this.auth.saveAuthData(authData); 
+
+                return response;                              
             })
             .catch(error => {
                 this.logout();

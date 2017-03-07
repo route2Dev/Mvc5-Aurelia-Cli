@@ -1,7 +1,28 @@
 <template>
+    <require from="./converters/limit-to"></require>
     <div class="row">
         <section class="col-sm-12">
             <div class="container">
                 <h2>Refresh Tokens</h2>
+                <p if.bind="!auth.authentication.useRefreshTokens"><strong>${auth.authentication.userName}</strong> has disabled <strong>Refresh Tokens</strong> once logged in, you can not
+                    refresh tokens.</p>
+                <div if.bind="auth.authentication.useRefreshTokens">
+                    <p class="text-success">Use this view to obtain new access token using the refresh token.</p>
+                    <p>User <strong>${auth.authentication.userName}</strong> has enabled <strong>Refresh Tokens</strong> once logged in, to
+                        refresh your current access token click on the button below.</p>
+                    <button class="btn btn-lg btn-info btn-block" type="submit" click.delegate="refreshToken()">Refresh Token</button>
+                </div>
+                <div if.bind="tokenRefreshed" style="margin-top:10px;">
+                    <div class="panel panel-success">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Successfully refreshed Access Token</h3>
+                        </div>
+                        <div class="panel-body">
+                            <p>Access_token: ${tokenResponse.access_token | limitTo : 30}....</p>
+                            <p><a href="#/secret-quote">Click here to view a secret quote using the new Access Token</a></p>
+                        </div>
+                    </div>
+
+                </div>
             </div>
 </template>

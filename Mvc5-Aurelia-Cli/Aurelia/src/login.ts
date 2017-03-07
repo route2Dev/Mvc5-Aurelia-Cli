@@ -24,7 +24,8 @@ export class Login {
     login() {                  
         let loginData : ILoginData = { 
             userName: this.email,
-            password: this.password
+            password: this.password,
+            useRefreshTokens : this.useRefreshTokens
         };
 
         return this.auth.login(loginData)
