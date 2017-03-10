@@ -59,7 +59,8 @@ export class AuthService {
 
         return response.json().then((errorMesage) => {
             return Promise.reject(new Error(errorMesage.error_description));
-        });
+        })
+        .catch(error => null);
     }
 
     logout() {

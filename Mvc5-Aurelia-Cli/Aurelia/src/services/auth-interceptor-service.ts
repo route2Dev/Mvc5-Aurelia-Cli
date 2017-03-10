@@ -52,4 +52,9 @@ export class AuthInterceptorService implements Interceptor {
         
         return response;
     }
+
+    responseError(error, request:Request) {
+        console.log('auth-interceptor caught error: ' + error);
+        return Promise.reject(new Error('Invalid response received.'));
+    }
 }

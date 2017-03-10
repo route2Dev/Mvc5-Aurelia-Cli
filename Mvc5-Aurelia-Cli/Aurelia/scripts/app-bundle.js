@@ -323,7 +323,8 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
             }
             return response.json().then(function (errorMesage) {
                 return Promise.reject(new Error(errorMesage.error_description));
-            });
+            })
+                .catch(function (error) { return null; });
         };
         AuthService.prototype.logout = function () {
             var _this = this;
@@ -502,6 +503,10 @@ define('services/auth-interceptor-service',["require", "exports", "aurelia-frame
                 this.router.navigateToRoute('login');
             }
             return response;
+        };
+        AuthInterceptorService.prototype.responseError = function (error, request) {
+            console.log('auth-interceptor caught error: ' + error);
+            return Promise.reject(new Error('Invalid response received.'));
         };
         return AuthInterceptorService;
     }());
