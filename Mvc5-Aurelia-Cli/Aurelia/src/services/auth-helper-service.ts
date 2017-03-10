@@ -8,6 +8,7 @@ export interface IAuthorizationData {
     refreshToken: string;
     userName: string;
     useRefreshTokens: boolean;
+    expiration: Date;
 }
 
 @inject(AuthConfig, LocalStorageService)
@@ -21,7 +22,7 @@ export class AuthHelperService {
     }
 
     set intialUrl(value: string) {
-        this._initialUrl = value;
+        this._initialUrl = value;        
     }
 
     get loginRoute() {

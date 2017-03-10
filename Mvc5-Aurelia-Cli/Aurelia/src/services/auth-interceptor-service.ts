@@ -13,23 +13,43 @@ export class AuthInterceptorService implements Interceptor {
     request(request: Request) {
 
         console.log('auth-interceptor called.');
-        
+
         let data = this.auth.getAuthData();
-        
+
         if (data) {
             console.log('auth-interceptor: ' + data.tokenType + ' ' + data.accessToken);
-            
+
             request.headers.append('Authorization', data.tokenType + ' ' + data.accessToken);
         }
 
         return request;
     }
 
-    responseError(response: Response) {
-       if(response.status === 401) {
-           console.log('auth-Interceptor-Service redirecting request.');
-           this.router.navigateToRoute('login');
-       }
-       return response;
+    response(response: Response, request: Request) {
+        console.log('auth-interceptor response called.');
+
+        if (response.status === 401) {
+            console.log('auth-Interceptor-Service response error 401.');
+
+            var authService: AuthService = this.aurelia.container.get('AuthService');
+            let data = this.auth.getAuthData();
+
+            if (data.useRefreshTokens) {
+                console.log('User has enabled refresh tokens. Refreshing token.');
+                authService.refreshToken().then(() => {
+                    let data = this.auth.getAuthData();
+
+                    request.headers.set('Authorization', data.tokenType + ' ' + data.accessToken);
+
+                    let http : HttpClient = this.aurelia.container.get('HttpClient');
+
+                    return http.fetch(request)
+                });
+            }
+            // else
+            this.router.navigateToRoute('login');
+        }
+        
+        return response;
     }
 }

@@ -362,10 +362,10 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
                 .then(function (response) {
                 var authorizationData;
                 if (loginData.useRefreshTokens) {
-                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true };
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true, expiration: response[".expires"] };
                 }
                 else {
-                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false, expiration: response[".expires"] };
                 }
                 _this.auth.saveAuthData(authorizationData);
                 _this._authentication.isAuth = true;
@@ -393,7 +393,7 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
                 })
                     .then(this.status)
                     .then(function (response) {
-                    var authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true };
+                    var authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true, expiration: response[".expires"] };
                     _this.auth.saveAuthData(authData);
                     return response;
                 })
@@ -483,9 +483,22 @@ define('services/auth-interceptor-service',["require", "exports", "aurelia-frame
             }
             return request;
         };
-        AuthInterceptorService.prototype.responseError = function (response) {
+        AuthInterceptorService.prototype.response = function (response, request) {
+            var _this = this;
+            console.log('auth-interceptor response called.');
             if (response.status === 401) {
-                console.log('auth-Interceptor-Service redirecting request.');
+                console.log('auth-Interceptor-Service response error 401.');
+                var authService = this.aurelia.container.get('AuthService');
+                var data = this.auth.getAuthData();
+                if (data.useRefreshTokens) {
+                    console.log('User has enabled refresh tokens. Refreshing token.');
+                    authService.refreshToken().then(function () {
+                        var data = _this.auth.getAuthData();
+                        request.headers.set('Authorization', data.tokenType + ' ' + data.accessToken);
+                        var http = _this.aurelia.container.get('HttpClient');
+                        return http.fetch(request);
+                    });
+                }
                 this.router.navigateToRoute('login');
             }
             return response;

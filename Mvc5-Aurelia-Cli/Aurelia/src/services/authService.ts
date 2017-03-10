@@ -110,9 +110,9 @@ export class AuthService {
                 let authorizationData: IAuthorizationData;
 
                 if (loginData.useRefreshTokens) {
-                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true };
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true, expiration: response[".expires"] };
                 } else {
-                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false };
+                    authorizationData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: "", useRefreshTokens: false, expiration: response[".expires"] };
                 }
 
                 this.auth.saveAuthData(authorizationData);
@@ -147,7 +147,7 @@ export class AuthService {
             })
             .then(this.status)
             .then(response => {
-                let authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true };
+                let authData = { accessToken: response.access_token, userName: response.userName, tokenType: "bearer", refreshToken: response.refresh_token, useRefreshTokens: true, expiration: response[".expires"] };
                 this.auth.saveAuthData(authData); 
 
                 return response;                              
