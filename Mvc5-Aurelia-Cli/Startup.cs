@@ -1,5 +1,7 @@
 ﻿using Microsoft.Owin;
+using Mvc5_Aurelia_Cli.Models;
 using Owin;
+using System.Data.Entity;
 using System.Web.Http;
 
 [assembly: OwinStartupAttribute(typeof(Mvc5_Aurelia_Cli.Startup))]
@@ -17,6 +19,8 @@ namespace Mvc5_Aurelia_Cli
 
             app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);
             app.UseWebApi(config);
+
+            Database.SetInitializer(new MigrateDatabaseToLatestVersion<ApplicationDbContext, Migrations.Configuration>());
         }
     }
 }

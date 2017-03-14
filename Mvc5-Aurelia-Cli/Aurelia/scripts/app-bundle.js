@@ -383,10 +383,12 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
         };
         AuthService.prototype.refreshToken = function () {
             var _this = this;
+            console.log('use refresh tokens called.');
             var data = this.auth.getAuthData();
             if (data && data.useRefreshTokens) {
                 var content = "grant_type=refresh_token&refresh_token=" + data.refreshToken + "&client_id=" + this.auth.clientId;
                 this.auth.removeAuthData();
+                console.log('refreshing token with content ' + content);
                 return this.http.fetch('token', {
                     method: 'post',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -403,6 +405,7 @@ define('services/authService',["require", "exports", "aurelia-framework", "aurel
                     return error;
                 });
             }
+            return Promise.resolve();
         };
         AuthService.prototype.intialize = function () {
             var data = this.auth.getAuthData();
@@ -467,7 +470,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-define('services/auth-interceptor-service',["require", "exports", "aurelia-framework", "aurelia-router", "./auth-helper-service"], function (require, exports, aurelia_framework_1, aurelia_router_1, auth_helper_service_1) {
+define('services/auth-interceptor-service',["require", "exports", "aurelia-framework", "aurelia-fetch-client", "aurelia-router", "./auth-helper-service", "./authService"], function (require, exports, aurelia_framework_1, aurelia_fetch_client_1, aurelia_router_1, auth_helper_service_1, authService_1) {
     "use strict";
     var AuthInterceptorService = (function () {
         function AuthInterceptorService(aurelia, auth, router) {
@@ -480,32 +483,38 @@ define('services/auth-interceptor-service',["require", "exports", "aurelia-frame
             var data = this.auth.getAuthData();
             if (data) {
                 console.log('auth-interceptor: ' + data.tokenType + ' ' + data.accessToken);
-                request.headers.append('Authorization', data.tokenType + ' ' + data.accessToken);
+                request.headers.set('Authorization', data.tokenType + ' ' + data.accessToken);
             }
             return request;
         };
-        AuthInterceptorService.prototype.response = function (response, request) {
+        AuthInterceptorService.prototype.handleErrorResponse = function (response, request) {
             var _this = this;
             console.log('auth-interceptor response called.');
+            var authService = this.aurelia.container.get(authService_1.AuthService);
             if (response.status === 401) {
                 console.log('auth-Interceptor-Service response error 401.');
-                var authService = this.aurelia.container.get('AuthService');
                 var data = this.auth.getAuthData();
                 if (data.useRefreshTokens) {
                     console.log('User has enabled refresh tokens. Refreshing token.');
-                    authService.refreshToken().then(function () {
+                    return authService.refreshToken().then(function () {
                         var data = _this.auth.getAuthData();
                         request.headers.set('Authorization', data.tokenType + ' ' + data.accessToken);
-                        var http = _this.aurelia.container.get('HttpClient');
+                        var http = _this.aurelia.container.get(aurelia_fetch_client_1.HttpClient);
                         return http.fetch(request);
                     });
                 }
-                this.router.navigateToRoute('login');
+                return authService.logout()
+                    .then(function () {
+                    _this.router.navigateToRoute('login');
+                });
             }
             return response;
         };
         AuthInterceptorService.prototype.responseError = function (error, request) {
             console.log('auth-interceptor caught error: ' + error);
+            if (error instanceof Response) {
+                return this.handleErrorResponse(error, request);
+            }
             return Promise.reject(new Error('Invalid response received.'));
         };
         return AuthInterceptorService;

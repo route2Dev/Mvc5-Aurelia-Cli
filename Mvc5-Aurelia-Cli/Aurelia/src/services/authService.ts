@@ -135,11 +135,15 @@ export class AuthService {
     }
 
     refreshToken() {
+        console.log('use refresh tokens called.');
+        
         let data = this.auth.getAuthData();
 
         if (data && data.useRefreshTokens) {
             let content = "grant_type=refresh_token&refresh_token=" + data.refreshToken + "&client_id=" + this.auth.clientId;
             this.auth.removeAuthData();
+
+            console.log('refreshing token with content ' + content);
 
             return this.http.fetch('token', {
                 method: 'post',
@@ -158,6 +162,8 @@ export class AuthService {
                 return error;
             });
         }
+
+        return Promise.resolve();
     }
 
     intialize() {
