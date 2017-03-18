@@ -7,7 +7,5 @@
     "node": "registry:dt/node",
     "selenium-webdriver": "registry:dt/selenium-webdriver#2.44.0+20160317120654"
   },
-  "globalDependencies": {
-    "url-search-params-typing": "github:RomkeVdMeulen/URLSearchParams"
-  }
+  "globalDependencies": {}
 }
