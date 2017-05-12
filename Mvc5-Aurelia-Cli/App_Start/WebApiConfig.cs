@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Serialization;
+﻿using Mvc5_Aurelia_Cli.Handlers;
+using Newtonsoft.Json.Serialization;
 using System.Linq;
 using System.Net.Http.Formatting;
 using System.Web.Http;
@@ -19,6 +20,8 @@ namespace Mvc5_Aurelia_Cli
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+
+            config.MessageHandlers.Add(new CustomHeaderHandler());
 
             var jsonFormatter = config.Formatters.OfType<JsonMediaTypeFormatter>().First();
             jsonFormatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();

@@ -15,10 +15,10 @@ export class RandomQuote {
     }
 
     getQuote() {       
-
+        console.log('GetQuote() called.');
         return this.httpClient.fetch("api/random-quote")
             .then(response => response.text())
-            .then(data => this.randomQuote = data)                           
+            .then(data => {this.randomQuote = data; console.log('data is ' + data);})                           
             .catch(error => {
                 console.log("Error getting quote.");
         });        

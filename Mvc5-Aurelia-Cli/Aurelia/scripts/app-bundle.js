@@ -790,9 +790,10 @@ define('random-quote',["require", "exports", "aurelia-framework", "aurelia-fetch
         };
         RandomQuote.prototype.getQuote = function () {
             var _this = this;
+            console.log('GetQuote() called.');
             return this.httpClient.fetch("api/random-quote")
                 .then(function (response) { return response.text(); })
-                .then(function (data) { return _this.randomQuote = data; })
+                .then(function (data) { _this.randomQuote = data; console.log('data is ' + data); })
                 .catch(function (error) {
                 console.log("Error getting quote.");
             });

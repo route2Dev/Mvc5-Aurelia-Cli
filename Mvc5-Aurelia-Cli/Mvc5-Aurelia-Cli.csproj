@@ -217,6 +217,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Handlers\CustomHeaderHandler.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Migrations\201702270154269_InitialCreate.cs" />
     <Compile Include="Migrations\201702270154269_InitialCreate.Designer.cs">
